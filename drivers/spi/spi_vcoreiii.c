@@ -166,7 +166,7 @@ err_no_bitbang:
 	return err;
 }
 
-static int __devexit spi_vcoreiii_remove(struct platform_device *pdev)
+static int __exit spi_vcoreiii_remove(struct platform_device *pdev)
 {
 	struct spi_vcoreiii *sp;
 	struct spi_vcoreiii_platform_data *pdata;
@@ -187,7 +187,7 @@ static struct platform_driver spi_vcoreiii_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= spi_vcoreiii_probe,
-	.remove		= __devexit_p(spi_vcoreiii_remove),
+	.remove		= __exit_p(spi_vcoreiii_remove),
 };
 
 static int __init spi_vcoreiii_init(void)
