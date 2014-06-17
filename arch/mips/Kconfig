@@ -336,6 +336,62 @@ config MIPS_MALTA
 	  This enables support for the MIPS Technologies Malta evaluation
 	  board.
 
+config VTSS_VCOREIII_JAGUAR
+	bool "Vitesse Semiconductor VCore-III Jaguar board"
+        select BOOT_RAW
+	select CEVT_R4K
+	select CSRC_R4K
+	select IRQ_CPU
+	select VTSS_VCOREIII_ARCH
+	select VTSS_VCOREIII_MK1
+	select DMA_NONCOHERENT
+	select SYS_HAS_CPU_MIPS32_R2
+	select SYS_SUPPORTS_32BIT_KERNEL
+	select SYS_SUPPORTS_BIG_ENDIAN
+	select SYS_SUPPORTS_LITTLE_ENDIAN
+	help
+	  This enables support for the Vitesse Semiconductor VCore-III evaluation
+	  board(s).
+
+config VTSS_VCOREIII_JAGUAR_DUAL
+	bool "Dual Jaguar option (48port, 2-chip)"
+	depends on VTSS_VCOREIII_JAGUAR
+
+config VTSS_VCOREIII_LUTON26
+	bool "Vitesse Semiconductor VCore-III Luton26 board"
+        select BOOT_RAW
+	select CEVT_R4K
+	select CSRC_R4K
+	select IRQ_CPU
+	select VTSS_VCOREIII_ARCH
+	select VTSS_VCOREIII_MK1
+	select DMA_NONCOHERENT
+	select SYS_HAS_CPU_MIPS32_R2
+	select SYS_SUPPORTS_32BIT_KERNEL
+	select SYS_SUPPORTS_BIG_ENDIAN
+	select SYS_SUPPORTS_LITTLE_ENDIAN
+	help
+	  This enables support for the Vitesse Semiconductor VCore-III evaluation
+	  board(s).
+
+config VTSS_VCOREIII_SERVAL1
+	bool "Vitesse Semiconductor VCore-III Serval1 board"
+        select BOOT_RAW
+	select CEVT_R4K
+	select CSRC_R4K
+	select IRQ_CPU
+	select VTSS_VCOREIII_ARCH
+	select DMA_NONCOHERENT
+	select SYS_HAS_CPU_MIPS32_R2
+	select SYS_SUPPORTS_32BIT_KERNEL
+	select SYS_SUPPORTS_BIG_ENDIAN
+	select SYS_SUPPORTS_LITTLE_ENDIAN
+	select GENERIC_GPIO
+        select ARCH_REQUIRE_GPIOLIB
+	help
+	  This enables support for the Vitesse Semiconductor VCore-III evaluation
+	  board(s).
+
 config MIPS_SEAD3
 	bool "MIPS SEAD3 board"
 	select BOOT_ELF32
@@ -1030,6 +1086,12 @@ config IRQ_GT641XX
 	bool
 
 config IRQ_GIC
+	bool
+
+config VTSS_VCOREIII_ARCH
+	bool
+
+config VTSS_VCOREIII_MK1
 	bool
 
 config PCI_GT64XXX_PCI0

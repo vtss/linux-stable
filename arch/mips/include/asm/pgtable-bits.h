@@ -235,6 +235,11 @@ static inline uint64_t pte_to_entrylo(unsigned long pte_val)
 #define _CACHE_CACHABLE_NONCOHERENT (5<<_CACHE_SHIFT)
 #define _CACHE_UNCACHED_ACCELERATED (7<<_CACHE_SHIFT)
 
+#elif defined(CONFIG_VTSS_VCOREIII_ARCH)
+
+#define _CACHE_UNCACHED             (2<<_CACHE_SHIFT)
+#define _CACHE_CACHABLE_NONCOHERENT (3<<_CACHE_SHIFT)
+
 #else
 
 #define _CACHE_CACHABLE_NO_WA	    (0<<_CACHE_SHIFT)  /* R4600 only	  */

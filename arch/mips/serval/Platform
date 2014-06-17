@@ -1,0 +1,6 @@
+#
+# Vitesse Semiconductor VCore-III Serval1 board(s)
+#
+platform-$(CONFIG_VTSS_VCOREIII_SERVAL1) += serval/
+cflags-$(CONFIG_VTSS_VCOREIII_SERVAL1)	 += -I$(srctree)/arch/mips/include/asm/mach-serval
+load-$(CONFIG_VTSS_VCOREIII_SERVAL1)	 += 0x80100000
