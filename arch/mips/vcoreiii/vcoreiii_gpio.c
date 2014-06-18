@@ -27,6 +27,7 @@
 
 #include <linux/module.h>
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 
 #include <asm/mach-vcoreiii/hardware.h>
 
@@ -89,23 +90,31 @@ void vcoreiii_gpio_set_input_slv(int gpio, int is_input)
 EXPORT_SYMBOL(vcoreiii_gpio_set_input_slv);
 #endif
 
-static int 
-gpio_proc_read(char *buf, char **start, off_t offset,
-		       int count, int *eof, void *data)
+static ssize_t
+gpio_proc_read(struct file *file, char __user *buf,
+               size_t count, loff_t *ppos)
 {
     u32 status = readl(VTSS_DEVCPU_GCB_GPIO_GPIO_IN);
-    *buf++ = (status & VTSS_BIT((u32)data)) ? '1' : '0';
-    *buf++ = '\n';
-
-    *eof = 1;
-    return 2;
+    unsigned char mybuf[2];
+    mybuf[0] = (status & VTSS_BIT(VCOREIII_BTN_DEFAULT)) ? '1' : '0';
+    mybuf[1] = '\n';
+    return simple_read_from_buffer(mybuf, count, ppos, mybuf, sizeof(mybuf));
 }
+
+static const struct file_operations button_proc_fops = {
+	.read		= gpio_proc_read,
+	.llseek		= default_llseek,
+};
 
 static int __init vcoreiii_gpio_init(void)
 {
+    struct proc_dir_entry *entry;
     vcoreiii_gpio_set_input(VCOREIII_BTN_DEFAULT, 1);
     g_button_dir = proc_mkdir("button", NULL);
-    create_proc_read_entry("default", 0, g_button_dir, gpio_proc_read, (void*) VCOREIII_BTN_DEFAULT);
+    entry = proc_create("default", S_IWUGO, g_button_dir, &button_proc_fops);
+    if (entry) {
+        proc_set_size(entry, 2);
+    }
     return 0;
 }
 

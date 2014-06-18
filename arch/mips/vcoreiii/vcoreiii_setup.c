@@ -27,8 +27,10 @@
 
 #include <linux/init.h>
 #include <linux/irq.h>
+#include <linux/ioport.h>	/* for struct resource */
 
 #include <asm/time.h>
+#include <asm/idle.h>
 #include <asm/reboot.h>
 
 #include <asm/mach-vcoreiii/hardware.h>
