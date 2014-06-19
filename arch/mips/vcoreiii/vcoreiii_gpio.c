@@ -111,7 +111,7 @@ static int __init vcoreiii_gpio_init(void)
     struct proc_dir_entry *entry;
     vcoreiii_gpio_set_input(VCOREIII_BTN_DEFAULT, 1);
     g_button_dir = proc_mkdir("button", NULL);
-    entry = proc_create("default", S_IWUGO, g_button_dir, &button_proc_fops);
+    entry = proc_create("default", S_IRUGO, g_button_dir, &button_proc_fops);
     if (entry) {
         proc_set_size(entry, 2);
     }

@@ -90,10 +90,8 @@ void __init prom_init(void)
     /* Add some random defaults... */
     if ((strstr(arcs_cmdline, "console=")) == NULL)
         strcat(arcs_cmdline, " console=ttyS0,115200");
-#if !defined(CONFIG_MTD_ROOTFS_ROOT_DEV)
     if ((strstr(arcs_cmdline, "root=")) == NULL)
         strcat(arcs_cmdline, " root=/dev/mtdblock4");
-#endif
     if ((strstr(arcs_cmdline, "mem=")) == NULL) {
         const char *memopt = prom_getenv("memsize");
         unsigned long memsize;
