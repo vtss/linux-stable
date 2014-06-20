@@ -504,7 +504,7 @@ int __init au_debug_init(void)
 	AuDebugOn(bindex >= 0);
 
 	destr.len = -1;
-	AuDebugOn(destr.len < NAME_MAX);
+	AuDebugOn(destr.len < NAME_MAX-1);
 
 #ifdef CONFIG_4KSTACKS
 	pr_warn("CONFIG_4KSTACKS is defined.\n");

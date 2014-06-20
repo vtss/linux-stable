@@ -370,7 +370,7 @@ static int au_wbr_init(struct au_branch *br, struct super_block *sb,
 	if (unlikely(err))
 		goto out;
 	err = -EINVAL;
-	if (kst.f_namelen >= NAME_MAX)
+	if (kst.f_namelen >= NAME_MAX-1)
 		err = au_br_init_wh(sb, br, perm);
 	else
 		pr_err("%pd(%s), unsupported namelen %ld\n",

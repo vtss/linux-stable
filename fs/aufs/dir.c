@@ -90,8 +90,8 @@ loff_t au_dir_size(struct file *file, struct dentry *dentry)
 		sz = roundup_pow_of_two(sz);
 	if (sz > KMALLOC_MAX_SIZE)
 		sz = KMALLOC_MAX_SIZE;
-	else if (sz < NAME_MAX) {
-		BUILD_BUG_ON(AUFS_RDBLK_DEF < NAME_MAX);
+	else if (sz < NAME_MAX-1) {
+		BUILD_BUG_ON(AUFS_RDBLK_DEF < NAME_MAX-1);
 		sz = AUFS_RDBLK_DEF;
 	}
 	return sz;

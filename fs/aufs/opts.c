@@ -1065,9 +1065,9 @@ int au_opts_parse(struct super_block *sb, char *str, struct au_opts *opts)
 				pr_err("bad integer in %s\n", opt_str);
 				break;
 			}
-			if (unlikely(n && n < NAME_MAX)) {
+			if (unlikely(n && n < NAME_MAX-1)) {
 				pr_err("rdblk must be larger than %d\n",
-				       NAME_MAX);
+				       NAME_MAX-1);
 				break;
 			}
 			opt->rdblk = n;

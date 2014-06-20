@@ -117,7 +117,7 @@ struct dentry *au_whtmp_lkup(struct dentry *h_parent, struct au_branch *br,
 {
 	struct dentry *dentry;
 	int i;
-	char defname[NAME_MAX - AUFS_MAX_NAMELEN + DNAME_INLINE_LEN + 1],
+	char defname[NAME_MAX-1 - AUFS_MAX_NAMELEN + DNAME_INLINE_LEN + 1],
 		*name, *p;
 	/* strict atomic_t is unnecessary here */
 	static unsigned short cnt;
@@ -129,7 +129,7 @@ struct dentry *au_whtmp_lkup(struct dentry *h_parent, struct au_branch *br,
 	qs.len = sizeof(defname) - DNAME_INLINE_LEN + prefix->len - 1;
 	if (unlikely(prefix->len > DNAME_INLINE_LEN)) {
 		dentry = ERR_PTR(-ENAMETOOLONG);
-		if (unlikely(qs.len > NAME_MAX))
+		if (unlikely(qs.len > NAME_MAX-1))
 			goto out;
 		dentry = ERR_PTR(-ENOMEM);
 		name = kmalloc(qs.len + 1, GFP_NOFS);
