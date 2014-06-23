@@ -57,20 +57,14 @@ static struct platform_device uart8250_device = {
 static struct uio_info switch_platform_data = {
     .name = "vcoreiii_switch",
     .version = "0",
-    .irq = XTR_RDY0_IRQ,
+    .irq = INT1_IRQ,    // Alternate IRQ. Application must remap IRQ destination
 };
 
 static struct resource switch_resources[] = {
     [0] = {
-        .name   = "origin1",
+        .name   = "origin1_2",
         .start  = VTSS_IO_ORIGIN1_OFFSET,
-        .end    = VTSS_IO_ORIGIN1_OFFSET + VTSS_IO_ORIGIN1_SIZE,
-        .flags  = IORESOURCE_MEM,
-    },
-    [1] = {
-        .name   = "origin2",
-        .start  = VTSS_IO_ORIGIN2_OFFSET,
-        .end    = VTSS_IO_ORIGIN2_OFFSET + VTSS_IO_ORIGIN2_SIZE,
+        .end    = VTSS_IO_ORIGIN2_OFFSET + VTSS_IO_ORIGIN2_SIZE - 1,
         .flags  = IORESOURCE_MEM,
     },
 };

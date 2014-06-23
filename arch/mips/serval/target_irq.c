@@ -99,13 +99,20 @@ asmlinkage void plat_irq_dispatch(void)
     if (pending & STATUSF_IP7)                      /* cpu timer */
         do_IRQ(TIMER_IRQ);
     else if (pending & STATUSF_IP2) {               /* vcoreiii pic */
-        int irq = readl(VTSS_ICPU_CFG_INTR_INTR_IDENT);
+        int irq = readl(VTSS_ICPU_CFG_INTR_DST_INTR_IDENT(0));    // OS-controlled IRQ's only
         if (unlikely(irq == 0)) {
             spurious_interrupt();
             return;
         }
         irq = ICPU_IRQ0_BASE + irq_ffs(irq);
         do_IRQ(irq);
+    } else if (pending & STATUSF_IP3) {             /* vcoreiii UIO */
+        int irq = readl(VTSS_ICPU_CFG_INTR_DST_INTR_IDENT(1));    // UIO-controlled IRQ's only
+        if (unlikely(irq == 0)) {
+            spurious_interrupt();
+            return;
+        }
+        do_IRQ(INT1_IRQ);
     } else if (pending & STATUSF_IP0)               /* user line 0 */
         do_IRQ(MIPS_SOFTINT0_IRQ);
     else if (pending & STATUSF_IP1)                 /* user line 1 */
@@ -117,4 +124,7 @@ asmlinkage void plat_irq_dispatch(void)
 void __init arch_init_irq(void)
 {
     mips_cpu_irq_init();
+    // Change INT1_IRQ handler to avoid eoi (unmask)
+    // This IRQ is exposed via UIO
+    irq_set_handler(INT1_IRQ, handle_level_irq);
 }
