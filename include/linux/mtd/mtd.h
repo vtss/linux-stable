@@ -111,6 +111,7 @@ struct nand_ecclayout {
 
 struct module;	/* only needed for owner field in mtd_info */
 
+struct mtd_info;
 struct mtd_info {
 	u_char type;
 	uint32_t flags;
@@ -250,6 +251,9 @@ struct mtd_info {
 	struct module *owner;
 	struct device dev;
 	int usecount;
+
+        int (*refresh_device)(struct mtd_info *mtd);
+        struct mtd_info *split;
 };
 
 int mtd_erase(struct mtd_info *mtd, struct erase_info *instr);

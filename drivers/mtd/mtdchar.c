@@ -192,7 +192,6 @@ static ssize_t mtdchar_read(struct file *file, char __user *buf, size_t count,
 
 	if (*ppos + count > mtd->size)
 		count = mtd->size - *ppos;
-
 	if (!count)
 		return 0;
 
@@ -990,6 +989,12 @@ static int mtdchar_ioctl(struct file *file, u_int cmd, u_long arg)
 	{
 		/* No reread partition feature. Just return ok */
 		ret = 0;
+		break;
+	}
+
+	case MTDREFRESH:
+	{
+		ret = refresh_mtd_partitions(mtd);
 		break;
 	}
 
