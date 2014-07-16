@@ -170,6 +170,10 @@ void __init vcoreiii_irq_init(void)
             set_irq_chip_and_handler(i, &vcoreiii_slvirq_ioc, handle_level_irq);
 	set_irq_chained_handler(EXT1_IRQ, handle_simple_irq);
 #endif	/* CONFIG_VTSS_VCOREIII_JAGUAR_DUAL */
+
+        // Enable VCoreIII INT routing to CPU IRQ0/1 (IP2/IP3).
+        writel(VTSS_F_ICPU_CFG_INTR_ICPU_IRQ0_ENA_ICPU_IRQ0_ENA, VTSS_ICPU_CFG_INTR_ICPU_IRQ0_ENA);
+        writel(VTSS_F_ICPU_CFG_INTR_ICPU_IRQ1_ENA_ICPU_IRQ1_ENA, VTSS_ICPU_CFG_INTR_ICPU_IRQ1_ENA);
 }
 
 static inline int clz(unsigned long x)
@@ -215,6 +219,13 @@ asmlinkage void plat_irq_dispatch(void)
                 }
 #endif  /* CONFIG_VTSS_VCOREIII_JAGUAR_DUAL */
                 do_IRQ(irq);
+        } else if (pending & STATUSF_IP3) {             /* vcoreiii UIO */
+            int irq = readl(VTSS_ICPU_CFG_INTR_ICPU_IRQ1_IDENT); // UIO-controlled IRQ's only
+            if (unlikely(irq == 0)) {
+                spurious_interrupt();
+                return;
+            }
+            do_IRQ(INT1_IRQ);
         } else if (pending & STATUSF_IP0)               /* user line 0 */
                 do_IRQ(MIPS_SOFTINT0_IRQ);
         else if (pending & STATUSF_IP1)                 /* user line 1 */
@@ -226,4 +237,7 @@ asmlinkage void plat_irq_dispatch(void)
 void __init arch_init_irq(void)
 {
 	mips_cpu_irq_init();
+        // Change INT1_IRQ handler to avoid eoi (unmask)
+        // This IRQ is exposed via UIO
+        irq_set_handler(INT1_IRQ, handle_level_irq);
 }
