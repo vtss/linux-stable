@@ -90,6 +90,8 @@ void __init prom_init(void)
     /* Add some random defaults... */
     if ((strstr(arcs_cmdline, "console=")) == NULL)
         strcat(arcs_cmdline, " console=ttyS0,115200");
+    if ((strstr(arcs_cmdline, "init=")) == NULL)
+        strcat(arcs_cmdline, " init=/etc/preinit");    
     if ((strstr(arcs_cmdline, "root=")) == NULL)
         strcat(arcs_cmdline, " root=/dev/mtdblock3");
     if ((strstr(arcs_cmdline, "mem=")) == NULL) {
