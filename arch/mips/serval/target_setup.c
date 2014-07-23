@@ -136,7 +136,9 @@ static void __init vcoreiii_late_time_init(void)
         gpio_request(23, "cfg1");
         gpio_request(24, "cfg2");
         gpio_request(25, "cfg3");
+        vcoreiii_gpio_set_alternate(8, 1); /* SI_nEN1/GPIO_8 */
         /* Standard SGPIO's */
+        gpio_request(32+32+10, "sd_cd"); /* Chip-detect bit*/
 #if 0
         gpio_request(32+ 0+ 7, "pushbutton");
         gpio_request(32+ 0+10, "sd_wp");

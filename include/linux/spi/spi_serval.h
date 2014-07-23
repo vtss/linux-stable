@@ -39,4 +39,9 @@ struct spi_serval_platform_data {
  */
 #define SPI_SERVAL_PLATDEV_NAME	"spi-vcoreiii"
 
+struct serval_spi_chip {
+  u8 enable_dma;
+  u8 pio_interrupt; /* Enable spi data irq */
+};
+
 #endif /* _LINUX_SPI_SPI_SERVAL */

@@ -32,6 +32,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_serval.h>
 #include <linux/spi/flash.h>
+#include <linux/spi/mmc_spi.h>
 
 #include <asm/mach-serval/hardware.h>
 
@@ -77,6 +78,36 @@ static struct flash_platform_data serval_spi_flash_data = {
         .phys_offset = 0x40000000,
 };
 
+/* MMC-SPI driver */
+#if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
+
+/* #define MMC_SPI_CARD_DETECT_INT 74 // todo: needs to be verified */
+
+/* static int serval_mmc_spi_init(struct device *dev, */
+/*                              irqreturn_t (*detect_int)(int, void *), void *data) */
+/* { */
+/*   return request_irq(MMC_SPI_CARD_DETECT_INT, detect_int, */
+/*                      IRQF_TRIGGER_FALLING, "mmc-spi-detect", data); */
+/* } */
+
+/* static void serval_mmc_spi_exit(struct device *dev, void *data) */
+/* { */
+/*   free_irq(MMC_SPI_CARD_DETECT_INT, data); */
+/* } */
+
+static struct mmc_spi_platform_data serval_mmc_spi_pdata = {
+  //  .init = serval_mmc_spi_init,
+  //  .exit = serval_mmc_spi_exit,
+  .detect_delay = 100, /* msecs */
+};
+
+static struct serval_spi_chip  mmc_spi_chip_info = {
+  .enable_dma = 0,
+  .pio_interrupt = 0,
+};
+#endif
+
+
 static struct spi_board_info serval_spi_board_info[] __initdata = {
 	{
 		/* the modalias must be the same as spi device driver name */
@@ -86,7 +117,20 @@ static struct spi_board_info serval_spi_board_info[] __initdata = {
 		.chip_select = 0, /* Framework chip select. */
 		.platform_data = &serval_spi_flash_data,
 		.mode = SPI_MODE_0, /* CPOL=0, CPHA=0 */
+        },
+
+#if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
+	{
+		.modalias = "mmc_spi",
+		.max_speed_hz = 20000000,     /* max spi clock (SCK) speed in HZ */
+		.bus_num = 0,
+		.chip_select = 1,
+		.platform_data = &serval_mmc_spi_pdata,
+		.controller_data = &mmc_spi_chip_info,
+		.mode = SPI_MODE_0,
 	},
+#endif
+
 };
 
 static int __init vcoreiii_mtd_init(void)
