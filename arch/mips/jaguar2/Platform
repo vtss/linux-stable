@@ -1,0 +1,6 @@
+#
+# Vitesse Semiconductor VCore-III Jaguar2 board(s)
+#
+platform-$(CONFIG_VTSS_VCOREIII_JAGUAR2) += jaguar2/
+cflags-$(CONFIG_VTSS_VCOREIII_JAGUAR2)	 += -I$(srctree)/arch/mips/include/asm/mach-jaguar2
+load-$(CONFIG_VTSS_VCOREIII_JAGUAR2)	 += 0x80100000

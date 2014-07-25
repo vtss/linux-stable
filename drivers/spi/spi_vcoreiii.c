@@ -1,5 +1,5 @@
 /*
- * Bitbanging SPI bus driver for VCore-III
+ * Bitbanging SPI bus driver for VCore-III / Serval1 / Jaguar2
  *
  * Copyright (c) 2011 Lars Povlsen
  *
@@ -22,7 +22,40 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_bitbang.h>
 #include <linux/spi/spi_vcoreiii.h>
+
+#if defined(CONFIG_VTSS_VCOREIII_MK1)
 #include <asm/mach-vcoreiii/hardware.h>
+#elif defined(CONFIG_VTSS_VCOREIII_SERVAL1)
+#include <asm/mach-serval/hardware.h>
+#elif defined(CONFIG_VTSS_VCOREIII_JAGUAR2)
+#include <asm/mach-jaguar2/hardware.h>
+#else
+#error Invalid architecture type
+#endif
+
+
+// On JR2, VTSS_F_xxx() macros for single-bit-fields have been
+// replaced by VTSS_M_xxx() macros. The VTSS_F_xxx() macros
+// all take a parameter.
+#if !defined(VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_PIN_CTRL_MODE)
+#define VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_PIN_CTRL_MODE VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_PIN_CTRL_MODE
+#endif
+#if !defined(VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK_OE)
+#define VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK_OE VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK_OE
+#endif
+#if !defined(VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK)
+#define VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK
+#endif
+#if !defined(VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO_OE)
+#define VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO_OE VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO_OE
+#endif
+#if !defined(VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO)
+#define VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO
+#endif
+#if !defined(VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDI)
+#define VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDI VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDI
+#endif
+
 #include <asm/atomic.h>
 
 struct spi_vcoreiii {
@@ -41,26 +74,26 @@ static inline void setsck(struct spi_device *dev, int val)
 {
 	struct spi_vcoreiii *sp = spidev_to_sg(dev);
 	if(val)
-		sp->bb_cur |= VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK;
+		sp->bb_cur |= VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK;
 	else
-		sp->bb_cur &= ~VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK;
+		sp->bb_cur &= ~VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK;
 	writel(sp->bb_cur, VTSS_ICPU_CFG_SPI_MST_SW_MODE);
 }
 
 static inline void setmosi(struct spi_device *dev, int val)
 {
 	struct spi_vcoreiii *sp = spidev_to_sg(dev);
-	sp->bb_cur |= VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO_OE;
+	sp->bb_cur |= VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO_OE;
 	if(val)
-		sp->bb_cur |= VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO;
+		sp->bb_cur |= VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO;
 	else
-		sp->bb_cur &= ~VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO;
+		sp->bb_cur &= ~VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDO;
 	writel(sp->bb_cur, VTSS_ICPU_CFG_SPI_MST_SW_MODE);
 }
 
 static inline u32 getmiso(struct spi_device *dev)
 {
-	return (readl(VTSS_ICPU_CFG_SPI_MST_SW_MODE) & VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDI) ? 1 : 0;
+	return (readl(VTSS_ICPU_CFG_SPI_MST_SW_MODE) & VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SDI) ? 1 : 0;
 }
 
 static inline void do_spidelay(struct spi_device *dev, unsigned nsecs)
@@ -107,9 +140,9 @@ static void spi_vcoreiii_chipselect(struct spi_device *dev, int on)
 	struct spi_vcoreiii *sp = spidev_to_sg(dev);
 	if(on) {
 		sp->bb_cur = 
-			VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK_OE | /* SCK_OE */
-			((dev->mode & SPI_CPOL) ? VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK : 0) | /* SCK */
-			VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_PIN_CTRL_MODE ; /* SW Bitbang */
+			VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK_OE | /* SCK_OE */
+			((dev->mode & SPI_CPOL) ? VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK : 0) | /* SCK */
+			VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_PIN_CTRL_MODE ; /* SW Bitbang */
 		/* Setup clock in right state before driving CS */
 		writel(sp->bb_cur, VTSS_ICPU_CFG_SPI_MST_SW_MODE);
 		/* Now enable CS */
