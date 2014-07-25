@@ -59,18 +59,18 @@ static struct mtd_partition jaguar2_spi_flash_partitions[] = {
 		.size =		0x00040000,
 	}, {
 		.name =		"linux",
-		.offset = 	0x00800000,
+		.offset = 	0x00E00000,
 		.size =		0x00200000,
 	}, {
 		.name =		"rootfs",
 		.offset = 	MTDPART_OFS_APPEND,
-//		.offset =       0x00800000 + 0x00200000, /* ROOTFS_SPLIT does not like MTDPART_OFS_APPEND */
-		.size =		0x00500000,
+//		.offset =       0x00E00000 + 0x00200000, /* ROOTFS_SPLIT does not like MTDPART_OFS_APPEND */
+		.size =		0x00A00000,
 	}
 };
 
 static struct flash_platform_data jaguar2_spi_flash_data = {
-	.type = "m25p128",
+	.type = "mx25l25635e",
 	.name = "spi_flash",
 	.parts = jaguar2_spi_flash_partitions,
 	.nr_parts = ARRAY_SIZE(jaguar2_spi_flash_partitions),
