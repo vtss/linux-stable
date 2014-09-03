@@ -33,9 +33,14 @@
 #include <asm/mach-vcoreiii/irq.h>
 #include <asm/mach-vcoreiii/hardware.h>
 
+static inline void _ack_irq_ioc(unsigned int irq)
+{
+        writel(1 << (irq - ICPU_IRQ0_BASE), VTSS_ICPU_CFG_INTR_INTR);
+}
+
 static void ack_irq_ioc(struct irq_data *data)
 {
-	writel(1 << (data->irq - ICPU_IRQ0_BASE), VTSS_ICPU_CFG_INTR_INTR); /* Ack sticky */
+        _ack_irq_ioc(data->irq); /* Ack sticky */
 }
 
 static void mask_irq_ioc(struct irq_data *data)
@@ -63,38 +68,38 @@ static struct irq_chip vcoreiii_irq_ioc = {
 };
 
 #if defined(CONFIG_VTSS_VCOREIII_JAGUAR_DUAL)
-static void slv_ack_irq_ioc(unsigned int irq)
+static void slv_ack_irq_ioc(struct irq_data *data)
 {
     //printk("%s: %d\n", __FUNCTION__, irq - SLV_IRQ_BASE);
-    slv_writel(1 << (irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR); /* Ack sticky */
+    slv_writel(1 << (data->irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR); /* Ack sticky */
     writel(1 << (EXT1_IRQ - ICPU_IRQ0_BASE), VTSS_ICPU_CFG_INTR_INTR); /* Ack master ext1 sticky */
 }
 
-static void slv_mask_irq_ioc(unsigned int irq)
+static void slv_mask_irq_ioc(struct irq_data *data)
 {
     //printk("%s: %d\n", __FUNCTION__, irq - SLV_IRQ_BASE);
-    slv_writel(1 << (irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR_ENA_CLR); /* Disable */
+    slv_writel(1 << (data->irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR_ENA_CLR); /* Disable */
 }
 
-static void slv_mask_ack_irq_ioc(unsigned int irq)
+static void slv_mask_ack_irq_ioc(struct irq_data *data)
 {
     //printk("%s: %d\n", __FUNCTION__, irq - SLV_IRQ_BASE);
-    slv_writel(1 << (irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR_ENA_CLR); /* Disable */
-    slv_writel(1 << (irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR); /* Ack sticky */
+    slv_writel(1 << (data->irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR_ENA_CLR); /* Disable */
+    slv_writel(1 << (data->irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR); /* Ack sticky */
     writel(1 << (EXT1_IRQ - ICPU_IRQ0_BASE), VTSS_ICPU_CFG_INTR_INTR); /* Ack master ext1 sticky */
 }
 
-static void slv_unmask_irq_ioc(unsigned int irq)
+static void slv_unmask_irq_ioc(struct irq_data *data)
 {
-    slv_writel(1 << (irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR_ENA_SET); /* Enable */
+    slv_writel(1 << (data->irq - SLV_IRQ_BASE), VTSS_ICPU_CFG_INTR_INTR_ENA_SET); /* Enable */
 }
 
 static struct irq_chip vcoreiii_slvirq_ioc = {
     .name = "vc3_sec",
-    .ack = slv_ack_irq_ioc,
-    .mask = slv_mask_irq_ioc,
-    .mask_ack = slv_mask_ack_irq_ioc,
-    .unmask = slv_unmask_irq_ioc,
+    .irq_ack = slv_ack_irq_ioc,
+    .irq_mask = slv_mask_irq_ioc,
+    .irq_mask_ack = slv_mask_ack_irq_ioc,
+    .irq_unmask = slv_unmask_irq_ioc,
 };
 #endif	/* CONFIG_VTSS_VCOREIII_JAGUAR_DUAL */
 
@@ -167,8 +172,8 @@ void __init vcoreiii_irq_init(void)
 	slv_writel(0xffffffff, VTSS_ICPU_CFG_INTR_INTR); /* Ack pending */
 
 	for (i = SLV_IRQ_BASE; i <= SLV_MIIM1_INTR_IRQ ; i++)
-            set_irq_chip_and_handler(i, &vcoreiii_slvirq_ioc, handle_level_irq);
-	set_irq_chained_handler(EXT1_IRQ, handle_simple_irq);
+            irq_set_chip_and_handler(i, &vcoreiii_slvirq_ioc, handle_level_irq);
+	irq_set_chained_handler(EXT1_IRQ, handle_simple_irq);
 #endif	/* CONFIG_VTSS_VCOREIII_JAGUAR_DUAL */
 
         // Enable VCoreIII INT routing to CPU IRQ0/1 (IP2/IP3).
@@ -211,7 +216,7 @@ asmlinkage void plat_irq_dispatch(void)
                 if(irq == EXT1_IRQ) {
                     irq = slv_readl(VTSS_ICPU_CFG_INTR_EXT_IRQ0_IDENT); /* *slave* EXT0 */
                     if (unlikely(irq == 0)) {
-                        ack_irq_ioc(EXT1_IRQ); /* Ack the cascaded (master) IRQ */
+                        _ack_irq_ioc(EXT1_IRQ); /* Ack the cascaded (master) IRQ */
                         spurious_interrupt();
                         return;
                     }
