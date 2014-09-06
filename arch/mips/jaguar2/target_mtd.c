@@ -133,13 +133,91 @@ static struct spi_board_info jaguar2_spi_board_info[] __initdata = {
 
 };
 
+#define NAND_ADDR_BIT_ALE (1 << 2)
+#define NAND_ADDR_BIT_CLE (1 << 3)
+
+/* hardware specific access to control-lines */
+static void jaguar2_nane_cmd_ctl(struct mtd_info *mtd, int dat,
+                                 unsigned int ctrl)
+{
+    struct nand_chip *this = mtd->priv;
+    int offset = (int)this->priv;
+
+    if (ctrl & NAND_CTRL_CHANGE) {
+        offset = 0;
+        if(ctrl & NAND_CLE) offset |= NAND_ADDR_BIT_CLE;
+        if(ctrl & NAND_ALE) offset |= NAND_ADDR_BIT_ALE;
+        this->priv = (void *)offset;
+    }
+    if (dat != NAND_CMD_NONE) {
+        writeb(dat, this->IO_ADDR_W + offset);
+    }
+}
+
+static struct mtd_partition vcoreiii_partition_info[] = {
+    [0] = {
+        .name	= "nand",
+        .offset	= 0,
+        .size	= MTDPART_SIZ_FULL,
+    },
+};
+
+struct platform_nand_data jaguar2_nane_platdata = {
+    .chip = {
+        .nr_chips = 1,
+        .chip_offset = 0,
+        .nr_partitions = ARRAY_SIZE(vcoreiii_partition_info),
+        .partitions = vcoreiii_partition_info,
+        .chip_delay = 50,
+    },
+    .ctrl = {
+        .cmd_ctrl = jaguar2_nane_cmd_ctl,
+    },
+};
+
+#define JAGUAR2_NAND_CS	0 /* CS0 */
+
+static struct resource jaguar2_nane_resource[] = {
+    [0] = {
+        .start = 0x50000000 + (JAGUAR2_NAND_CS*0x4000000), /* CS0 */
+        .end   = 0x50000000 + (JAGUAR2_NAND_CS*0x4000000) + NAND_ADDR_BIT_CLE*2,
+        .flags = IORESOURCE_MEM,
+    },
+};
+
+static struct platform_device jaguar2_nand = {
+    .name		= "gen_nand",
+    .num_resources	= ARRAY_SIZE(jaguar2_nane_resource),
+    .resource	= jaguar2_nane_resource,
+    .id		= -1,
+    .dev		= {
+        .platform_data = &jaguar2_nane_platdata,
+    }
+};
+
 static int __init vcoreiii_mtd_init(void)
 {
-	platform_device_register(&jaguar2_spi);
+    /* Enable the PI interface */
+    vcoreiii_io_set(VTSS_ICPU_CFG_CPU_SYSTEM_CTRL_GENERAL_CTRL,  
+                    VTSS_M_ICPU_CFG_CPU_SYSTEM_CTRL_GENERAL_CTRL_IF_PI_MST_ENA);
 
-	spi_register_board_info(jaguar2_spi_board_info, ARRAY_SIZE(jaguar2_spi_board_info));
+    /* Slow down NAND CS via waitcc - appx 77ns */
+    vcoreiii_io_mask_set(VTSS_ICPU_CFG_PI_MST_PI_MST_CTRL,
+                         VTSS_M_ICPU_CFG_PI_MST_PI_MST_CTRL_WAITCC,
+                         VTSS_F_ICPU_CFG_PI_MST_PI_MST_CTRL_WAITCC(8));
 
-	return 0;
+    platform_device_register(&jaguar2_spi);
+
+    spi_register_board_info(jaguar2_spi_board_info, ARRAY_SIZE(jaguar2_spi_board_info));
+
+    return 0;
+}
+
+static int __init vcoreiii_mtd_init_nand(void)
+{
+    platform_device_register(&jaguar2_nand);
+    return 0;
 }
 
 module_init(vcoreiii_mtd_init)
+late_initcall(vcoreiii_mtd_init_nand);
