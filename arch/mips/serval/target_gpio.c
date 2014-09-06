@@ -161,7 +161,7 @@ int __init srvl_gpio_init(void)
 	   VTSS_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG);
 	   
     /* Setup the serial IO clock frequency - 12.5MHz (0x14) */
-    writel(0x14, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG);
+    writel(0x14, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_CLOCK);
 
     /* Reset all SGPIO ports */
     for (port = 0; port < 32; port++)
