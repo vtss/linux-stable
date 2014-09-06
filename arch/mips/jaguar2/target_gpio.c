@@ -77,9 +77,9 @@ void vcoreiii_gpio_set_input(int gpio, int is_input)
 }
 EXPORT_SYMBOL(vcoreiii_gpio_set_input);
 
-static DEFINE_SPINLOCK(srvl_gpio_lock);
+static DEFINE_SPINLOCK(jag2_gpio_lock);
 
-static int srvl_gpio_get(struct gpio_chip *chip, unsigned int offset)
+static int jag2_gpio_get(struct gpio_chip *chip, unsigned int offset)
 {
     if (offset < 32) {
         return !!(readl(VTSS_DEVCPU_GCB_GPIO_GPIO_IN) & (1 << offset));
@@ -88,10 +88,10 @@ static int srvl_gpio_get(struct gpio_chip *chip, unsigned int offset)
     }
 }
 
-static void srvl_gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
+static void jag2_gpio_set(struct gpio_chip *chip, unsigned int offset, int value)
 {
     unsigned long flags;
-    spin_lock_irqsave(&srvl_gpio_lock, flags);
+    spin_lock_irqsave(&jag2_gpio_lock, flags);
     if (offset < 32) {
         u32 mask = VTSS_BIT(offset);
         if(value)
@@ -106,21 +106,21 @@ static void srvl_gpio_set(struct gpio_chip *chip, unsigned int offset, int value
             vcoreiii_io_clr(VTSS_DEVCPU_GCB_GPIO_GPIO_OUT1, mask);
     }
     mmiowb();
-    spin_unlock_irqrestore(&srvl_gpio_lock, flags);
+    spin_unlock_irqrestore(&jag2_gpio_lock, flags);
 }
 
-static int srvl_gpio_dir_in(struct gpio_chip *chip, unsigned int offset)
+static int jag2_gpio_dir_in(struct gpio_chip *chip, unsigned int offset)
 {
-    spin_lock_irq(&srvl_gpio_lock);
+    spin_lock_irq(&jag2_gpio_lock);
     vcoreiii_io_clr(VTSS_DEVCPU_GCB_GPIO_GPIO_OE, 1 << offset);
     mmiowb();
-    spin_unlock_irq(&srvl_gpio_lock);
+    spin_unlock_irq(&jag2_gpio_lock);
     return 0;
 }
 
-static int srvl_gpio_dir_out(struct gpio_chip *chip, unsigned int offset, int value)
+static int jag2_gpio_dir_out(struct gpio_chip *chip, unsigned int offset, int value)
 {
-    spin_lock_irq(&srvl_gpio_lock);
+    spin_lock_irq(&jag2_gpio_lock);
     if (offset < 32) {
         u32 mask = VTSS_BIT(offset);
         if(value)
@@ -137,28 +137,82 @@ static int srvl_gpio_dir_out(struct gpio_chip *chip, unsigned int offset, int va
         vcoreiii_io_set(VTSS_DEVCPU_GCB_GPIO_GPIO_OE1, mask);
     }
     mmiowb();
-    spin_unlock_irq(&srvl_gpio_lock);
+    spin_unlock_irq(&jag2_gpio_lock);
     return 0;
 }
 
-static struct gpio_chip srvl_gpio_chip = {
-    .get = srvl_gpio_get,
-    .set = srvl_gpio_set,
-    .direction_input = srvl_gpio_dir_in,
-    .direction_output = srvl_gpio_dir_out,
+static struct gpio_chip jag2_gpio_chip = {
+    .get = jag2_gpio_get,
+    .set = jag2_gpio_set,
+    .direction_input = jag2_gpio_dir_in,
+    .direction_output = jag2_gpio_dir_out,
     .label = "gpio",
     .base = 0,
     .ngpio = 64,
     .exported = 1,
 };
 
-int __init srvl_gpio_init(void)
+static int jag2_sgpio_get(struct gpio_chip *chip, unsigned int offset)
+{
+     int ix = offset / 32;
+     offset %= 32;
+     return !!(readl(VTSS_DEVCPU_GCB_SIO_CTRL_SIO_INPUT_DATA(ix,offset)));
+}
+
+static void jag2_sgpio_set(struct gpio_chip *chip, unsigned int offset, int value)
+{
+}
+
+static int jag2_sgpio_dir_in(struct gpio_chip *chip, unsigned int offset)
+{
+    return 0;
+}
+
+static int jag2_sgpio_dir_out(struct gpio_chip *chip, unsigned int offset, int value)
+{
+    return -EFAULT;
+}
+
+static struct gpio_chip jag2_sgpio_chip = {
+    .get = jag2_sgpio_get,
+    .set = jag2_sgpio_set,
+    .direction_input = jag2_sgpio_dir_in,
+    .direction_output = jag2_sgpio_dir_out,
+    .label = "sgpio",
+    .base = 64,
+    .ngpio = 4*32,             /* Bitwidth 4 */
+    .exported = 1,
+};
+
+int __init jag2_gpio_init(void)
 {
     int rc;
+    int bit_count = 2;    /* ... */
+    int port;
 
-    if((rc = gpiochip_add(&srvl_gpio_chip)) != 0)
+    if((rc = gpiochip_add(&jag2_gpio_chip)) != 0)
         return rc;
-    printk(KERN_WARNING "Jaguar2 registered %d GPIOs\n", srvl_gpio_chip.ngpio);
+    printk(KERN_WARNING "Jaguar2 registered %d GPIOs\n", jag2_gpio_chip.ngpio);
+
+    /* Intialize SGPIO */
+    writel(0xFFF0FFFF, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_PORT_ENA(0)); /* Enable [31:24] and [15:0] */
+    writel(VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CFG_SIO_BMODE_0(2) |
+	   VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CFG_SIO_BMODE_1(1) |
+	   VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CFG_SIO_BURST_GAP(0x1F) |
+	   VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CFG_SIO_PORT_WIDTH(bit_count - 1) |
+	   VTSS_M_DEVCPU_GCB_SIO_CTRL_SIO_CFG_SIO_AUTO_REPEAT, 
+	   VTSS_DEVCPU_GCB_SIO_CTRL_SIO_CFG(0));
+	   
+    /* Setup the serial IO clock frequency - 12.5MHz (0x14) */
+    writel(0x14, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_CLOCK(0));
+
+    /* Reset all SGPIO ports */
+    for (port = 0; port < 32; port++)
+        writel(0, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_PORT_CFG(0, port));
+
+    if((rc = gpiochip_add(&jag2_sgpio_chip)) != 0)
+	    return rc;
+    printk(KERN_WARNING "Jaguar2 registered %d SGPIOs\n", jag2_sgpio_chip.ngpio);
 
     return 0;
 }

@@ -107,7 +107,7 @@ EXPORT_SYMBOL(vcoreiii_reg_to_phys);
 static void __init vcoreiii_late_time_init(void)
 {
 	extern void __init vcoreiii_irq_init(void);
-        extern void __init srvl_gpio_init(void);
+        extern void __init jag2_gpio_init(void);
 
 	map_base_switch = ioremap(vcoreiii_reserved_resources[0].start,
 				  vcoreiii_reserved_resources[0].end -
@@ -125,7 +125,11 @@ static void __init vcoreiii_late_time_init(void)
 	vcoreiii_irq_init();
 
         /* Register GPIO's */
-        srvl_gpio_init();
+        jag2_gpio_init();
+
+        /* Standard GPIO's */
+        gpio_request(10, "uart_rx");
+        gpio_request(11, "uart_tx");
 }
 
 void __init plat_mem_setup(void)
