@@ -74,8 +74,9 @@ static struct flash_platform_data jaguar2_spi_flash_data = {
 	.name = "spi_flash",
 	.parts = jaguar2_spi_flash_partitions,
 	.nr_parts = ARRAY_SIZE(jaguar2_spi_flash_partitions),
-        .read_mapped = 1,
-        .phys_offset = 0x40000000,
+        //        .read_mapped = 1,
+        //        .phys_offset = 0x40000000,
+        .use_4byte_commands = 1,
 };
 
 /* MMC-SPI driver */

@@ -1259,7 +1259,8 @@ static int m25p_probe(struct spi_device *spi)
 	else if (flash->mtd.size > 0x1000000) {
 		/* enable 4-byte addressing if the device exceeds 16MiB */
 		flash->addr_width = 4;
-		if (JEDEC_MFR(info->jedec_id) == CFI_MFR_AMD) {
+		if (JEDEC_MFR(info->jedec_id) == CFI_MFR_AMD ||
+                    (data && data->use_4byte_commands)) {
 			/* Dedicated 4-byte command set */
 			switch (flash->flash_read) {
 			case M25P80_QUAD:
