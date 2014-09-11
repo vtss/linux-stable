@@ -1569,7 +1569,7 @@ EXPORT_SYMBOL_GPL(spi_busnum_to_master);
 int spi_setup(struct spi_device *spi)
 {
 
-  //	unsigned	bad_bits, ugly_bits;
+  	unsigned	bad_bits, ugly_bits;
 	int		status = 0;
 
 	/* check mode to prevent that DUAL and QUAD set at the same time
@@ -1588,21 +1588,21 @@ int spi_setup(struct spi_device *spi)
 	/* help drivers fail *cleanly* when they need options
 	 * that aren't supported with their current master
 	 */
-        //	bad_bits = spi->mode & ~spi->master->mode_bits;
-        //	ugly_bits = bad_bits &
-	//	    (SPI_TX_DUAL | SPI_TX_QUAD | SPI_RX_DUAL | SPI_RX_QUAD);
-	//if (ugly_bits) {
-	//	dev_warn(&spi->dev,
-	//		 "setup: ignoring unsupported mode bits %x\n",
-	//		 ugly_bits);
-	//	spi->mode &= ~ugly_bits;
-	//	bad_bits &= ~ugly_bits;
-	//}
-	//if (bad_bits) {
-	//	dev_err(&spi->dev, "setup: unsupported mode bits %x\n",
-	//		bad_bits);
-	//	return -EINVAL;
-	//}
+        	bad_bits = spi->mode & ~spi->master->mode_bits;
+        	ugly_bits = bad_bits &
+		    (SPI_TX_DUAL | SPI_TX_QUAD | SPI_RX_DUAL | SPI_RX_QUAD);
+	if (ugly_bits) {
+		dev_warn(&spi->dev,
+			 "setup: ignoring unsupported mode bits %x\n",
+			 ugly_bits);
+		spi->mode &= ~ugly_bits;
+		bad_bits &= ~ugly_bits;
+	}
+	if (bad_bits) {
+		dev_err(&spi->dev, "setup: unsupported mode bits %x\n",
+			bad_bits);
+		return -EINVAL;
+	}
 
 	if (!spi->bits_per_word)
 		spi->bits_per_word = 8;
