@@ -117,27 +117,11 @@ static u32 spi_vcoreiii_txrx_mode0(struct spi_device *spi,
 	return bitbang_txrx_be_cpha0(spi, nsecs, 0, 0, word, bits);
 }
 
-static u32 spi_vcoreiii_txrx_mode1(struct spi_device *spi,
-			       unsigned nsecs, u32 word, u8 bits)
-{
-	return bitbang_txrx_be_cpha1(spi, nsecs, 0, 0, word, bits);
-}
-
-static u32 spi_vcoreiii_txrx_mode2(struct spi_device *spi,
-			       unsigned nsecs, u32 word, u8 bits)
-{
-	return bitbang_txrx_be_cpha0(spi, nsecs, 1, 0, word, bits);
-}
-
-static u32 spi_vcoreiii_txrx_mode3(struct spi_device *spi,
-			       unsigned nsecs, u32 word, u8 bits)
-{
-	return bitbang_txrx_be_cpha1(spi, nsecs, 1, 0, word, bits);
-}
-
 static void spi_vcoreiii_chipselect(struct spi_device *dev, int on)
 {
 	struct spi_vcoreiii *sp = spidev_to_sg(dev);
+	int cs_high = !!(dev->mode & SPI_CS_HIGH);
+
 	if(on) {
 		sp->bb_cur = 
 			VTSS_M_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_SCK_OE | /* SCK_OE */
@@ -146,9 +130,11 @@ static void spi_vcoreiii_chipselect(struct spi_device *dev, int on)
 		/* Setup clock in right state before driving CS */
 		writel(sp->bb_cur, VTSS_ICPU_CFG_SPI_MST_SW_MODE);
 		/* Now enable CS */
-		sp->bb_cur |=
-			VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_CS_OE(VTSS_BIT(dev->chip_select)) | /* CS_OE */
-			VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_CS(VTSS_BIT(dev->chip_select));
+                if (!cs_high) {
+                    sp->bb_cur |=
+                            VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_CS_OE(VTSS_BIT(dev->chip_select)) | /* CS_OE */
+                            VTSS_F_ICPU_CFG_SPI_MST_SW_MODE_SW_SPI_CS(VTSS_BIT(dev->chip_select));
+                }
 		writel(sp->bb_cur, VTSS_ICPU_CFG_SPI_MST_SW_MODE);
 	} else {
 		/* Drive CS low */
@@ -168,7 +154,7 @@ static int spi_vcoreiii_probe(struct platform_device *pdev)
 
 	master = spi_alloc_master(&pdev->dev, sizeof(struct spi_vcoreiii));
 	if (!master) {
-		printk(KERN_ERR SPI_VCOREIII_PLATDEV_NAME ": Allocation error\n");
+		dev_err(&pdev->dev, "failed to allocate spi master\n");
 		return -ENOMEM;
 	}
 
@@ -181,9 +167,8 @@ static int spi_vcoreiii_probe(struct platform_device *pdev)
 	sp->bitbang.master->num_chipselect = 4;
 	sp->bitbang.chipselect = spi_vcoreiii_chipselect;
 	sp->bitbang.txrx_word[SPI_MODE_0] = spi_vcoreiii_txrx_mode0;
-	sp->bitbang.txrx_word[SPI_MODE_1] = spi_vcoreiii_txrx_mode1;
-	sp->bitbang.txrx_word[SPI_MODE_2] = spi_vcoreiii_txrx_mode2;
-	sp->bitbang.txrx_word[SPI_MODE_3] = spi_vcoreiii_txrx_mode3;
+	sp->bitbang.setup_transfer = spi_bitbang_setup_transfer;
+	sp->bitbang.flags = SPI_CS_HIGH;
 
 	err = spi_bitbang_start(&sp->bitbang);
 	if (err)
@@ -194,12 +179,11 @@ static int spi_vcoreiii_probe(struct platform_device *pdev)
 err_no_bitbang:
 	spi_master_put(sp->bitbang.master);
 	kfree(master);
-	printk(KERN_ERR SPI_VCOREIII_PLATDEV_NAME ": Error: %d\n", err);
 
 	return err;
 }
 
-static int __exit spi_vcoreiii_remove(struct platform_device *pdev)
+static int spi_vcoreiii_remove(struct platform_device *pdev)
 {
 	struct spi_vcoreiii *sp;
 	struct spi_vcoreiii_platform_data *pdata;
@@ -213,6 +197,11 @@ static int __exit spi_vcoreiii_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void spi_vcoreiii_shutdown(struct platform_device *pdev)
+{
+        spi_vcoreiii_remove(pdev);
+}
+
 MODULE_ALIAS("platform:" SPI_VCOREIII_PLATDEV_NAME);
 static struct platform_driver spi_vcoreiii_driver = {
 	.driver		= {
@@ -220,24 +209,10 @@ static struct platform_driver spi_vcoreiii_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= spi_vcoreiii_probe,
-	.remove		= __exit_p(spi_vcoreiii_remove),
+	.remove		= spi_vcoreiii_remove,
+	.shutdown 	= spi_vcoreiii_shutdown,
 };
-
-static int __init spi_vcoreiii_init(void)
-{
-	int err;
-	err = platform_driver_register(&spi_vcoreiii_driver);
-	if (err)
-		printk(KERN_ERR SPI_VCOREIII_PLATDEV_NAME ": register failed: %d\n", err);
-	return err;
-}
-module_init(spi_vcoreiii_init);
-
-static void __exit spi_vcoreiii_exit(void)
-{
-	platform_driver_unregister(&spi_vcoreiii_driver);
-}
-module_exit(spi_vcoreiii_exit);
+module_platform_driver(spi_vcoreiii_driver);
 
 MODULE_AUTHOR("Lars Povlsen <lpovlsen at vitesse.com>");
 MODULE_AUTHOR("Lars Povlsen");

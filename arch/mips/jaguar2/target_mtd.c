@@ -32,7 +32,11 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_vcoreiii.h>
 #include <linux/spi/flash.h>
+
+#if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
+#include <linux/mmc/host.h>
 #include <linux/spi/mmc_spi.h>
+#endif
 
 #include <asm/mach-jaguar2/hardware.h>
 
@@ -81,33 +85,11 @@ static struct flash_platform_data jaguar2_spi_flash_data = {
 
 /* MMC-SPI driver */
 #if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
-
-/* #define MMC_SPI_CARD_DETECT_INT 74 // todo: needs to be verified */
-
-/* static int jaguar2_mmc_spi_init(struct device *dev, */
-/*                              irqreturn_t (*detect_int)(int, void *), void *data) */
-/* { */
-/*   return request_irq(MMC_SPI_CARD_DETECT_INT, detect_int, */
-/*                      IRQF_TRIGGER_FALLING, "mmc-spi-detect", data); */
-/* } */
-
-/* static void jaguar2_mmc_spi_exit(struct device *dev, void *data) */
-/* { */
-/*   free_irq(MMC_SPI_CARD_DETECT_INT, data); */
-/* } */
-
 static struct mmc_spi_platform_data jaguar2_mmc_spi_pdata = {
-  //  .init = jaguar2_mmc_spi_init,
-  //  .exit = jaguar2_mmc_spi_exit,
-  .detect_delay = 100, /* msecs */
-};
-
-static struct jaguar2_spi_chip  mmc_spi_chip_info = {
-  .enable_dma = 0,
-  .pio_interrupt = 0,
+    .ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34, /* default anyway */
+    .detect_delay = 100, /* msecs */
 };
 #endif
-
 
 static struct spi_board_info jaguar2_spi_board_info[] __initdata = {
 	{
@@ -125,9 +107,9 @@ static struct spi_board_info jaguar2_spi_board_info[] __initdata = {
 		.modalias = "mmc_spi",
 		.max_speed_hz = 20000000,     /* max spi clock (SCK) speed in HZ */
 		.bus_num = 0,
-		.chip_select = 1,
+		.chip_select = 3,
 		.platform_data = &jaguar2_mmc_spi_pdata,
-		.controller_data = &mmc_spi_chip_info,
+		.controller_data = NULL,
 		.mode = SPI_MODE_0,
 	},
 #endif
