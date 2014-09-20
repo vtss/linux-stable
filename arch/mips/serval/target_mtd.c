@@ -30,18 +30,22 @@
 #include <linux/mtd/partitions.h>
 #include <mtd/mtd-abi.h>
 #include <linux/spi/spi.h>
-#include <linux/spi/spi_serval.h>
+#include <linux/spi/spi_vcoreiii.h>
 #include <linux/spi/flash.h>
+
+#if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
+#include <linux/mmc/host.h>
 #include <linux/spi/mmc_spi.h>
+#endif
 
 #include <asm/mach-serval/hardware.h>
 
-static struct spi_serval_platform_data spi_serval_cfg = {
+static struct spi_vcoreiii_platform_data spi_serval_cfg = {
 	// .no_spi_delay = 1,
 };
 
 static struct platform_device serval_spi = {
-        .name             = SPI_SERVAL_PLATDEV_NAME,
+        .name             = SPI_VCOREIII_PLATDEV_NAME,
         .id               = 0,
         .dev = {
                 .platform_data = &spi_serval_cfg,
@@ -59,13 +63,12 @@ static struct mtd_partition serval_spi_flash_partitions[] = {
 		.size =		0x00040000,
 	}, {
 		.name =		"linux",
-		.offset = 	0x00800000,
+		.offset = 	0x00880000,
 		.size =		0x00200000,
 	}, {
 		.name =		"rootfs",
 		.offset = 	MTDPART_OFS_APPEND,
-//		.offset =       0x00800000 + 0x00200000, /* ROOTFS_SPLIT does not like MTDPART_OFS_APPEND */
-		.size =		0x00500000,
+		.size =		0x00480000,
 	}
 };
 
@@ -80,30 +83,27 @@ static struct flash_platform_data serval_spi_flash_data = {
 
 /* MMC-SPI driver */
 #if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
+static int vcoreiii_mmc_spi_init(struct device *dev, 
+                                 irqreturn_t (*detect_int)(int, void *), 
+                                 void *data)
+{
+    /* Reserve SD/MMC CS pin */
+    vcoreiii_gpio_set_alternate(8, 1); /* SI_nEN1/GPIO_8 */
+    return 0;
+}
 
-/* #define MMC_SPI_CARD_DETECT_INT 74 // todo: needs to be verified */
-
-/* static int serval_mmc_spi_init(struct device *dev, */
-/*                              irqreturn_t (*detect_int)(int, void *), void *data) */
-/* { */
-/*   return request_irq(MMC_SPI_CARD_DETECT_INT, detect_int, */
-/*                      IRQF_TRIGGER_FALLING, "mmc-spi-detect", data); */
-/* } */
-
-/* static void serval_mmc_spi_exit(struct device *dev, void *data) */
-/* { */
-/*   free_irq(MMC_SPI_CARD_DETECT_INT, data); */
-/* } */
-
+#define VTSS_SPI_MMC_CD (32+32+10)    // SGPIO p10.1 = GPIO 74, 0 => NO Card detect
+#define VTSS_SPI_MMC_WP (32+ 0+10)    // SGPIO p10.0 = GPIO 42, 0 => RO is OFF
 static struct mmc_spi_platform_data serval_mmc_spi_pdata = {
-  //  .init = serval_mmc_spi_init,
-  //  .exit = serval_mmc_spi_exit,
-  .detect_delay = 100, /* msecs */
-};
-
-static struct serval_spi_chip  mmc_spi_chip_info = {
-  .enable_dma = 0,
-  .pio_interrupt = 0,
+    .caps          = MMC_CAP_NEEDS_POLL,            /* No IRQ on SGPIO */
+    .caps2         = MMC_CAP2_RO_ACTIVE_HIGH,
+    .ocr_mask      = MMC_VDD_32_33 | MMC_VDD_33_34, /* default power */
+    .detect_delay  = 100, /* msecs */
+    .powerup_msecs = 100, /* msecs */
+    .flags         = MMC_SPI_USE_CD_GPIO | MMC_SPI_USE_RO_GPIO,
+    .cd_gpio	   = VTSS_SPI_MMC_CD,
+    .ro_gpio       = VTSS_SPI_MMC_WP,
+    .init          = vcoreiii_mmc_spi_init,
 };
 #endif
 
@@ -126,7 +126,7 @@ static struct spi_board_info serval_spi_board_info[] __initdata = {
 		.bus_num = 0,
 		.chip_select = 1,
 		.platform_data = &serval_mmc_spi_pdata,
-		.controller_data = &mmc_spi_chip_info,
+		.controller_data = NULL,
 		.mode = SPI_MODE_0,
 	},
 #endif

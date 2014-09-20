@@ -106,18 +106,23 @@ static struct gpio_chip srvl_gpio_chip = {
     .label = "gpio",
     .base = 0,
     .ngpio = 32,
-    .exported = 1,
 };
 
 static int srvl_sgpio_get(struct gpio_chip *chip, unsigned int offset)
 {
-     int ix = offset / 32;
-     offset %= 32;
-     return !!(readl(VTSS_DEVCPU_GCB_SIO_CTRL_SIO_INPUT_DATA(ix)) & (1 << offset));
+     int ix   = offset / 32;
+     int port = offset % 32;
+     return !!(readl(VTSS_DEVCPU_GCB_SIO_CTRL_SIO_INPUT_DATA(ix)) & (1 << port));
 }
 
 static void srvl_sgpio_set(struct gpio_chip *chip, unsigned int offset, int value)
 {
+     int ix   = offset / 32;
+     int port = offset % 32;
+     u32 val  = readl(VTSS_DEVCPU_GCB_SIO_CTRL_SIO_PORT_CONFIG(port));
+     u32 mask = (0x7 << (ix*3));
+     val = (val & ~mask) | (value << (ix*3));
+     writel(val, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_PORT_CONFIG(port));
 }
 
 static int srvl_sgpio_dir_in(struct gpio_chip *chip, unsigned int offset)
@@ -127,7 +132,7 @@ static int srvl_sgpio_dir_in(struct gpio_chip *chip, unsigned int offset)
 
 static int srvl_sgpio_dir_out(struct gpio_chip *chip, unsigned int offset, int value)
 {
-    return -EFAULT;
+    return 0;
 }
 
 static struct gpio_chip srvl_sgpio_chip = {
@@ -137,35 +142,18 @@ static struct gpio_chip srvl_sgpio_chip = {
     .direction_output = srvl_sgpio_dir_out,
     .label = "sgpio",
     .base = 32,
-    .ngpio = 32+32,             /* Bitwidth 2 */
-    .exported = 1,
+    .ngpio = 32+32,
 };
 
 int __init srvl_gpio_init(void)
 {
     int rc;
-    int bit_count = (srvl_sgpio_chip.ngpio / 32); /* Serval1ref */
-    int port;
+    //int bit_count = (srvl_sgpio_chip.ngpio / 32); /* Serval1ref */
+    //int port;
 
     if((rc = gpiochip_add(&srvl_gpio_chip)) != 0)
         return rc;
     printk(KERN_WARNING "Serval registered %d GPIOs\n", srvl_gpio_chip.ngpio);
-
-    /* Intialize SGPIO */
-    writel(0xFFFF0FFF, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_PORT_ENABLE); /* Enable [31:24] and [15:0] */
-    writel(VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG_SIO_BMODE_0(2) |
-	   VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG_SIO_BMODE_1(1) |
-	   VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG_SIO_BURST_GAP(0x1F) |
-	   VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG_SIO_PORT_WIDTH(bit_count - 1) |
-	   VTSS_F_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG_SIO_AUTO_REPEAT, 
-	   VTSS_DEVCPU_GCB_SIO_CTRL_SIO_CONFIG);
-	   
-    /* Setup the serial IO clock frequency - 12.5MHz (0x14) */
-    writel(0x14, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_CLOCK);
-
-    /* Reset all SGPIO ports */
-    for (port = 0; port < 32; port++)
-	    writel(0, VTSS_DEVCPU_GCB_SIO_CTRL_SIO_PORT_CONFIG(port));
 
     if((rc = gpiochip_add(&srvl_sgpio_chip)) != 0)
 	    return rc;
@@ -177,3 +165,20 @@ int gpio_to_irq(unsigned gpio) /* Dummy */
 {
     return -1;
 }
+
+static int __init vcoreiii_gpio_reserve(void)
+{
+    /* Standard GPIO's */
+    vcoreiii_gpio_set_alternate(22, 0); /* VCORE_CFG0-3 */
+    vcoreiii_gpio_set_alternate(23, 0);
+    vcoreiii_gpio_set_alternate(24, 0);
+    vcoreiii_gpio_set_alternate(25, 0);
+    /* Standard SGPIO's */
+    //gpio_request(22, "cfg0");
+    //gpio_request(23, "cfg1");
+    //gpio_request(24, "cfg2");
+    //gpio_request(25, "cfg3");
+    (void) gpio_request_one(32+ 0+ 7, GPIOF_DIR_IN|GPIOF_EXPORT, "sgpio_pushbutton");
+    return 0;
+}
+late_initcall(vcoreiii_gpio_reserve);

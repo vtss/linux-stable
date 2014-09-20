@@ -126,24 +126,6 @@ static void __init vcoreiii_late_time_init(void)
 
         /* Register GPIO's */
         srvl_gpio_init();
-
-        /* Standard GPIO's */
-        vcoreiii_gpio_set_alternate(22, 0); /* VCORE_CFG0-3 */
-        vcoreiii_gpio_set_alternate(23, 0);
-        vcoreiii_gpio_set_alternate(24, 0);
-        vcoreiii_gpio_set_alternate(25, 0);
-        gpio_request(22, "cfg0");
-        gpio_request(23, "cfg1");
-        gpio_request(24, "cfg2");
-        gpio_request(25, "cfg3");
-        vcoreiii_gpio_set_alternate(8, 1); /* SI_nEN1/GPIO_8 */
-        /* Standard SGPIO's */
-        gpio_request(32+32+10, "sd_cd"); /* Chip-detect bit*/
-#if 0
-        gpio_request(32+ 0+ 7, "pushbutton");
-        gpio_request(32+ 0+10, "sd_wp");
-        gpio_request(32+32+10, "sd_cd");
-#endif
 }
 
 void __init plat_mem_setup(void)
@@ -160,4 +142,3 @@ void __init plat_mem_setup(void)
         for (i = 0; i < ARRAY_SIZE(vcoreiii_reserved_resources); i++)
                 request_resource(&ioport_resource, vcoreiii_reserved_resources + i);
 }
-
