@@ -126,10 +126,6 @@ static void __init vcoreiii_late_time_init(void)
 
         /* Register GPIO's */
         jag2_gpio_init();
-
-        /* Standard GPIO's */
-        gpio_request(10, "uart_rx");
-        gpio_request(11, "uart_tx");
 }
 
 void __init plat_mem_setup(void)

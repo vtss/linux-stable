@@ -36,6 +36,7 @@
 #if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
 #include <linux/mmc/host.h>
 #include <linux/spi/mmc_spi.h>
+#include <gpio.h>
 #endif
 
 #include <asm/mach-jaguar2/hardware.h>
@@ -85,9 +86,25 @@ static struct flash_platform_data jaguar2_spi_flash_data = {
 
 /* MMC-SPI driver */
 #if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
+static int vcoreiii_mmc_spi_init(struct device *dev, 
+                                 irqreturn_t (*detect_int)(int, void *), 
+                                 void *data)
+{
+    /* Reserve SD/MMC CS pin */
+    vcoreiii_gpio_set_alternate(18, 1); /* SI_nCS3/GPIO_18 */
+    return 0;
+}
+#define VTSS_SPI_MMC_CD VCOREIII_SGPIO(0, 15, 1) // SGPIO:0 p15.1 = GPIO 111, 0 => NO Card detect
+#define VTSS_SPI_MMC_WP VCOREIII_SGPIO(0, 15, 0) // SGPIO:0 p15.0 = GPIO 79, 0 => RO is OFF
 static struct mmc_spi_platform_data jaguar2_mmc_spi_pdata = {
-    .ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34, /* default anyway */
-    .detect_delay = 100, /* msecs */
+    .caps          = MMC_CAP_NEEDS_POLL,            /* No IRQ on SGPIO */
+    .caps2         = MMC_CAP2_RO_ACTIVE_HIGH,
+    .ocr_mask      = MMC_VDD_32_33 | MMC_VDD_33_34, /* default power */
+    .detect_delay  = 100, /* msecs */
+    .flags         = MMC_SPI_USE_CD_GPIO | MMC_SPI_USE_RO_GPIO,
+    .cd_gpio	   = VTSS_SPI_MMC_CD,
+    .ro_gpio       = VTSS_SPI_MMC_WP,
+    .init          = vcoreiii_mmc_spi_init,
 };
 #endif
 
