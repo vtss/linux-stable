@@ -216,7 +216,11 @@ static int __init vcoreiii_gpio_reserve(void)
     gpio_request(10, "uart_rx");
     gpio_request(11, "uart_tx");
     /* Standard SGPIO's */
-    (void) gpio_request_one(5, GPIOF_DIR_IN|GPIOF_EXPORT, "pushbutton");
+#if defined(CONFIG_MMC_SPI) || defined(CONFIG_MMC_SPI_MODULE)
+    (void) gpio_request_one(5, GPIOF_DIR_IN|GPIOF_EXPORT, "pushbutton"); // PCB 112
+#else
+    (void) gpio_request_one(48, GPIOF_DIR_IN|GPIOF_EXPORT, "pushbutton"); // PCB 110,111
+#endif
     return 0;
 }
 late_initcall(vcoreiii_gpio_reserve);
