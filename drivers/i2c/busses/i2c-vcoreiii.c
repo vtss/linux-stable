@@ -38,8 +38,20 @@
 #include <linux/spinlock.h>
 #include <linux/slab.h>
 
+#if defined(CONFIG_VTSS_VCOREIII_MK1)
 #include <asm/mach-vcoreiii/hardware.h>
 #include <asm/mach-vcoreiii/i2c.h>
+#elif defined(CONFIG_VTSS_VCOREIII_SERVAL1)
+#include <asm/mach-serval/hardware.h>
+#include <asm/mach-serval/i2c.h>
+#elif defined(CONFIG_VTSS_VCOREIII_JAGUAR2)
+#include <asm/mach-jaguar2/hardware.h>
+#include <asm/mach-jaguar2/i2c.h>
+#else
+#error Invalid architecture type
+#endif
+
+
 
 #define DEBUG_I2C(x...) do { if(debug) printk(KERN_DEBUG x); } while(0)
 #define DEBUG_I2C_L(l, x...) do { if(debug >= l) printk(KERN_DEBUG x); } while(0)
@@ -49,6 +61,74 @@
 #define VCOREIII_XFER_TIMEOUT       (HZ/2) // 0.5sec
 #define VCOREIII_TX_FIFO_FULL_LEVEL 8
 #define VCOREIII_TX_FIFO_THRESHOLD  6
+#define VCOREIII_RX_FIFO_FULL_LEVEL 8
+#define VCOREIII_RX_FIFO_THRESHOLD  6
+
+// Macro for accessing registers - Used for being able to see when we do registers accesses
+/* Single-instance macros */
+#if !defined(CONFIG_VTSS_VCOREIII_JAGUAR2)
+/* Only one instance available */
+#else
+/* Use the default instance for now */
+#define VTSS_WR(data,address) writel(data, address(VTSS_TO_TWI))
+#define VTSS_RD(address) readl(address(VTSS_TO_TWI))
+#endif
+
+#define VTSS_WRS(data, address) writel(data, address)
+
+// On JR2, VTSS_F_xxx() macros for single-bit-fields have been
+// replaced by VTSS_M_xxx() macros. The VTSS_F_xxx() macros
+// all take a parameter.
+#if !defined(VTSS_M_TWI_TWI_ENABLE_STATUS_BUSY)
+#define VTSS_M_TWI_TWI_ENABLE_STATUS_BUSY VTSS_F_TWI_TWI_ENABLE_STATUS_BUSY
+#endif
+#if !defined(VTSS_M_TWI_TWI_STAT_TFNF)
+#define VTSS_M_TWI_TWI_STAT_TFNF VTSS_F_TWI_TWI_STAT_TFNF
+#endif
+#if !defined(VTSS_M_TWI_TWI_DATA_CMD_CMD)
+#define VTSS_M_TWI_TWI_DATA_CMD_CMD VTSS_F_TWI_TWI_DATA_CMD_CMD
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_STAT_TX_ABRT)
+#define VTSS_M_TWI_TWI_INTR_STAT_TX_ABRT VTSS_F_TWI_TWI_INTR_STAT_TX_ABRT
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL)
+#define VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL VTSS_F_TWI_TWI_INTR_MASK_M_RX_FULL
+#endif
+#if !defined(VTSS_M_TWI_TWI_STAT_RFNE)
+#define VTSS_M_TWI_TWI_STAT_RFNE VTSS_F_TWI_TWI_STAT_RFNE
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_MASK_M_TX_EMPTY)
+#define VTSS_M_TWI_TWI_INTR_MASK_M_TX_EMPTY VTSS_F_TWI_TWI_INTR_MASK_M_TX_EMPTY
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_STAT_STOP_DET)
+#define VTSS_M_TWI_TWI_INTR_STAT_STOP_DET VTSS_F_TWI_TWI_INTR_STAT_STOP_DET
+#endif
+#if !defined(VTSS_M_TWI_TWI_CTRL_ENABLE)
+#define VTSS_M_TWI_TWI_CTRL_ENABLE VTSS_F_TWI_TWI_CTRL_ENABLE
+#endif
+#if !defined(VTSS_M_ICPU_CFG_TWI_DELAY_TWI_CONFIG_TWI_DELAY_ENABLE)
+#define VTSS_M_ICPU_CFG_TWI_DELAY_TWI_CONFIG_TWI_DELAY_ENABLE VTSS_F_ICPU_CFG_TWI_DELAY_TWI_CONFIG_TWI_DELAY_ENABLE
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_MASK_M_TX_ABRT)
+#define VTSS_M_TWI_TWI_INTR_MASK_M_TX_ABRT VTSS_F_TWI_TWI_INTR_MASK_M_TX_ABRT
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_STAT_RX_DONE)
+#define VTSS_M_TWI_TWI_INTR_STAT_RX_DONE VTSS_F_TWI_TWI_INTR_STAT_RX_DONE
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_STAT_RX_OVER)
+#define VTSS_M_TWI_TWI_INTR_STAT_RX_OVER VTSS_F_TWI_TWI_INTR_STAT_RX_OVER
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_STAT_TX_OVER)
+#define VTSS_M_TWI_TWI_INTR_STAT_TX_OVER VTSS_F_TWI_TWI_INTR_STAT_TX_OVER
+#endif
+#if !defined(VTSS_M_TWI_TWI_TX_ABRT_SOURCE_ABRT_TXDATA_NOACK)
+#define VTSS_M_TWI_TWI_TX_ABRT_SOURCE_ABRT_TXDATA_NOACK VTSS_F_TWI_TWI_TX_ABRT_SOURCE_ABRT_TXDATA_NOACK
+#endif
+#if !defined(VTSS_M_TWI_TWI_TX_ABRT_SOURCE_ARB_LOST)
+#define VTSS_M_TWI_TWI_TX_ABRT_SOURCE_ARB_LOST VTSS_F_TWI_TWI_TX_ABRT_SOURCE_ARB_LOST
+#endif
+
+
 
 struct vcoreiii_twi_iface {
     struct device      *dev;
@@ -69,7 +149,7 @@ enum {
 
 static void i2c_reset(struct i2c_adapter *adap)
 {
-    writel(0x0, VTSS_TWI_TWI_CTRL); /* Leave it disabled */
+    VTSS_WR(0x0, VTSS_TWI_TWI_CTRL); /* Leave it disabled */
 }
 
 static void stuff_tx(struct vcoreiii_twi_iface *dev)
@@ -77,14 +157,39 @@ static void stuff_tx(struct vcoreiii_twi_iface *dev)
     unsigned long flags;
     int lev;
     spin_lock_irqsave(&dev->lock, flags);
-    while(dev->buf_len && (lev = readl(VTSS_TWI_TWI_TXFLR)) < VCOREIII_TX_FIFO_FULL_LEVEL) {
+
+    /* write to slave */
+    while(dev->buf_len && (lev = VTSS_RD(VTSS_TWI_TWI_TXFLR)) < VCOREIII_TX_FIFO_FULL_LEVEL) {
         DEBUG_I2C_L(2,"PUT 0x%x, %d bytes left, level %d\n", *(dev->buf), dev->buf_len, lev);
-        writel(*(dev->buf), VTSS_TWI_TWI_DATA_CMD);
+        VTSS_WR(*(dev->buf), VTSS_TWI_TWI_DATA_CMD);
         dev->buf++;
         dev->buf_len--;
     }
-    if(dev->buf_len == 0)
-        writel(0, VTSS_TWI_TWI_TX_TL); /* when empty, call me */
+    if(dev->buf_len == 0) {
+        VTSS_WR(0, VTSS_TWI_TWI_TX_TL); /* when empty, call me */
+    }
+    spin_unlock_irqrestore(&dev->lock, flags);
+}
+
+static void stuff_rx(struct vcoreiii_twi_iface *dev)
+{
+    unsigned long flags;
+    int lev;
+    size_t cnt = dev->buf_len;
+    
+    spin_lock_irqsave(&dev->lock, flags);
+
+    /* read from slave */
+    while ((lev = VTSS_RD(VTSS_TWI_TWI_STAT) & VTSS_M_TWI_TWI_STAT_TFNF)) {
+        if (cnt > 0) {
+            DEBUG_I2C("GET 1 byte, %d bytes left, level %d\n", cnt, lev);
+            VTSS_WR(VTSS_M_TWI_TWI_DATA_CMD_CMD, VTSS_TWI_TWI_DATA_CMD);
+            cnt--;                
+        }
+        if (cnt == 0)
+            break;
+    }
+
     spin_unlock_irqrestore(&dev->lock, flags);
 }
 
@@ -92,7 +197,7 @@ static int wait_for_tx_buffer(int level, int timeout)
 {
     unsigned long status;
 
-    while((status = readl(VTSS_TWI_TWI_TXFLR) > level) && timeout > 0) {
+    while((status = VTSS_RD(VTSS_TWI_TWI_TXFLR) > level) && timeout > 0) {
         DEBUG_I2C("TX wait level %ld - want %d\n", status, level);
         msleep(1);
         timeout--;
@@ -113,13 +218,13 @@ static int do_xfer(struct i2c_adapter *adap, struct i2c_msg *msg)
     wait_for_tx_buffer(0, 5); 
 
     // disable controller to write TAR
-    writel(0x0, VTSS_TWI_TWI_CTRL);
+    VTSS_WR(0x0, VTSS_TWI_TWI_CTRL);
 
     // set target address
-    writel(msg->addr, VTSS_TWI_TWI_TAR);
+    VTSS_WR(msg->addr, VTSS_TWI_TWI_TAR);
 
     // enable controller
-    writel(VTSS_F_TWI_TWI_CTRL_ENABLE, VTSS_TWI_TWI_CTRL);
+    VTSS_WR(VTSS_M_TWI_TWI_CTRL_ENABLE, VTSS_TWI_TWI_CTRL);
 
     dev->buf = msg->buf;
     dev->buf_len = msg->len;
@@ -128,15 +233,18 @@ static int do_xfer(struct i2c_adapter *adap, struct i2c_msg *msg)
 
     if (msg->flags & I2C_M_RD) {
         // read command - data = 0x00 (don't care)
-        writel(VTSS_F_TWI_TWI_DATA_CMD_CMD, VTSS_TWI_TWI_DATA_CMD);
-        writel(VTSS_F_TWI_TWI_INTR_MASK_M_RX_FULL, VTSS_TWI_TWI_INTR_MASK); // enable rx fifo interrupt
+        //VTSS_WR(VTSS_M_TWI_TWI_DATA_CMD_CMD, VTSS_TWI_TWI_DATA_CMD);
+        while (dev->buf_len > 0) {
+            stuff_rx(dev);
+            VTSS_WR(VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL, VTSS_TWI_TWI_INTR_MASK); // enable rx fifo interrupt
+        }
     } else {
         // write command - stuff data into fifo
-        writel(VCOREIII_TX_FIFO_THRESHOLD, VTSS_TWI_TWI_TX_TL); /* less than 3/4 full, call me */
+        VTSS_WR(VCOREIII_TX_FIFO_THRESHOLD, VTSS_TWI_TWI_TX_TL); /* less than 3/4 full, call me */
         stuff_tx(dev);
-        writel(VTSS_F_TWI_TWI_INTR_MASK_M_TX_ABRT|
-               VTSS_F_TWI_TWI_INTR_STAT_TX_OVER|
-               VTSS_F_TWI_TWI_INTR_MASK_M_TX_EMPTY, 
+        VTSS_WR(VTSS_M_TWI_TWI_INTR_MASK_M_TX_ABRT|
+               VTSS_M_TWI_TWI_INTR_STAT_TX_OVER|
+               VTSS_M_TWI_TWI_INTR_MASK_M_TX_EMPTY, 
 	       VTSS_TWI_TWI_INTR_MASK); // enable tx fifo interrupt
     }
 
@@ -189,47 +297,57 @@ static irqreturn_t vcoreiii_twi_interrupt_entry(int irq, void *dev_id)
     unsigned long status;
     int count = 0;
 
-    while((status = readl(VTSS_TWI_TWI_INTR_STAT))) { // figure out what interrupt we got
+    while((status = VTSS_RD(VTSS_TWI_TWI_INTR_STAT))) { // figure out what interrupt we got
         DEBUG_I2C_L(2, "IRQ stat 0x%lx\n", status);
         if (count++ == 100) {
             dev_err(dev->dev, "Too much work in one IRQ - stat 0x%lx\n", status);
             break;
         }
-	if(status & VTSS_F_TWI_TWI_INTR_STAT_TX_ABRT) {
-            DEBUG_I2C(" TX abrt src 0x%x\n", readl(VTSS_TWI_TWI_TX_ABRT_SOURCE));
-            writel(0, VTSS_TWI_TWI_INTR_MASK);
+	if(status & VTSS_M_TWI_TWI_INTR_STAT_TX_ABRT) {
+            status &= ~VTSS_M_TWI_TWI_INTR_STAT_TX_ABRT; /* clear tx_abrt */
+            DEBUG_I2C(" TX abrt src 0x%x\n", VTSS_RD(VTSS_TWI_TWI_TX_ABRT_SOURCE));
+            VTSS_WR(0, VTSS_TWI_TWI_INTR_MASK);
             dev->cmd_err |= I2C_CMPLT_ABORT;
             complete(&dev->cmd_complete);
-        } else if(status & VTSS_F_TWI_TWI_INTR_STAT_RX_FULL) {
-            if (dev->buf_len) {
-                *(dev->buf) = readl(VTSS_TWI_TWI_DATA_CMD);
+        }
+
+        if(status & VTSS_M_TWI_TWI_INTR_STAT_RX_FULL) {
+            status &= ~VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL; /* Clear rx_full */
+            /* Drain Rx FIFO */
+            while (VTSS_RD(VTSS_TWI_TWI_STAT) & VTSS_M_TWI_TWI_STAT_RFNE) {
+                /* while data in fifo */
+                (*dev->buf) = VTSS_RD(VTSS_TWI_TWI_DATA_CMD);
                 DEBUG_I2C("READ %x, %d bytes left\n", *(dev->buf), dev->buf_len);
                 dev->buf++;
                 if (--dev->buf_len == 0) {
-                    writel(0, VTSS_TWI_TWI_INTR_MASK);
+                    VTSS_WR(0, VTSS_TWI_TWI_INTR_MASK);
                     DEBUG_I2C("Read complete\n");
                     complete(&dev->cmd_complete);
+                    break;
                 }
-            } else {
-                dev_err(dev->dev, "Data while idle? - 0x%lx\n", status);
-            }
-        } else if(status & VTSS_F_TWI_TWI_INTR_STAT_TX_EMPTY) {
+            }            
+        }
+
+        if(status & VTSS_M_TWI_TWI_INTR_STAT_TX_EMPTY) {
+            status &= ~VTSS_M_TWI_TWI_INTR_MASK_M_TX_EMPTY; /* clear tx_empty */
             if (dev->buf_len) {
                 stuff_tx(dev);
             } else {
-                u32 lev = readl(VTSS_TWI_TWI_TXFLR);
+                u32 lev = VTSS_RD(VTSS_TWI_TWI_TXFLR);
                 if(lev == 0) {
-                    writel(0, VTSS_TWI_TWI_INTR_MASK);
+                    VTSS_WR(0, VTSS_TWI_TWI_INTR_MASK);
                     DEBUG_I2C("Empty and done - status 0x%lx\n", status);
                     complete(&dev->cmd_complete);
                 } else {
                     DEBUG_I2C("Empty and not done - status 0x%lx, level %d\n", status, lev);
                 }
             }
-        } else {
+        }
+
+        if (status) {
             dev_err(dev->dev, "Unexpected status 0x%lx\n", status);
         }
-        readl(VTSS_TWI_TWI_CLR_INTR); // clear the interrupt(s)
+        VTSS_RD(VTSS_TWI_TWI_CLR_INTR); // clear the interrupt(s)
     }
     return count ? IRQ_HANDLED : IRQ_NONE;
 }
@@ -244,34 +362,33 @@ static int i2c_vcoreiii_hwinit(const struct vcoreiii_i2c_platform_data *pdata)
     unsigned long clk_freq = VCOREIII_AHB_CLOCK, reg_val;
 
     reg_val = (5 * clk_freq / 1000000) - 8;  // datasheet 6.17.1.5
-    writel(reg_val, VTSS_TWI_TWI_SS_SCL_HCNT);
+    VTSS_WR(reg_val, VTSS_TWI_TWI_SS_SCL_HCNT);
 
     reg_val = (5 * clk_freq / 1000000) - 1;  // datasheet 6.17.1.6
-    writel(reg_val, VTSS_TWI_TWI_SS_SCL_LCNT);
+    VTSS_WR(reg_val, VTSS_TWI_TWI_SS_SCL_LCNT);
 
-    reg_val = VTSS_F_ICPU_CFG_TWI_DELAY_TWI_CONFIG_TWI_CNT_RELOAD((unsigned int) (0.3 * clk_freq / 1000000) - 1) |
-                                              VTSS_F_ICPU_CFG_TWI_DELAY_TWI_CONFIG_TWI_DELAY_ENABLE;  // datasheet 6.17
-    writel(reg_val, VTSS_ICPU_CFG_TWI_DELAY_TWI_CONFIG);
+    reg_val = VTSS_F_ICPU_CFG_TWI_DELAY_TWI_CONFIG_TWI_CNT_RELOAD((unsigned int)(0.3 * clk_freq / 1000000) - 1) | VTSS_M_ICPU_CFG_TWI_DELAY_TWI_CONFIG_TWI_DELAY_ENABLE;  // datasheet 6.17
+    VTSS_WRS(reg_val, VTSS_ICPU_CFG_TWI_DELAY_TWI_CONFIG);
 
     reg_val = (1.1 * clk_freq / 1000000) - 1;  // datasheet 6.17.1.7
-    writel(reg_val, VTSS_TWI_TWI_FS_SCL_HCNT);
+    VTSS_WR(reg_val, VTSS_TWI_TWI_FS_SCL_HCNT);
 
     reg_val = (1.4 * clk_freq / 1000000) - 1;  // datasheet 6.17.1.8
-    writel(reg_val, VTSS_TWI_TWI_FS_SCL_LCNT);
+    VTSS_WR(reg_val, VTSS_TWI_TWI_FS_SCL_LCNT);
 
     reg_val =
-        VTSS_F_TWI_TWI_CFG_MASTER_ENA |
-        VTSS_F_TWI_TWI_CFG_SPEED(pdata->fast_mode ? 2 : 1) | /* 400 or 100 kbit/s */
-        VTSS_F_TWI_TWI_CFG_RESTART_ENA |
-        VTSS_F_TWI_TWI_CFG_SLAVE_DIS;
-    writel(reg_val, VTSS_TWI_TWI_CFG);
+            VTSS_M_TWI_TWI_CFG_MASTER_ENA |
+            VTSS_F_TWI_TWI_CFG_SPEED(pdata->fast_mode ? 2 : 1) | /* 400 or 100 kbit/s */
+            VTSS_M_TWI_TWI_CFG_RESTART_ENA |
+            VTSS_M_TWI_TWI_CFG_SLAVE_DIS;
+    VTSS_WR(reg_val, VTSS_TWI_TWI_CFG);
 
     reg_val = (0.25 * clk_freq / 1000000);  // datasheet 6.17.1.30
-    writel(reg_val, VTSS_TWI_TWI_SDA_SETUP);
+    VTSS_WR(reg_val, VTSS_TWI_TWI_SDA_SETUP);
 
-    writel(0, VTSS_TWI_TWI_RX_TL); /* (n+1) => one byte of data */
-    writel(0x0, VTSS_TWI_TWI_INTR_MASK); // mask all until we're ready
-    writel(VTSS_F_TWI_TWI_CTRL_ENABLE, VTSS_TWI_TWI_CTRL);
+    VTSS_WR(0, VTSS_TWI_TWI_RX_TL); /* (n+1) => one byte of data */
+    VTSS_WR(0x0, VTSS_TWI_TWI_INTR_MASK); // mask all until we're ready
+    VTSS_WR(VTSS_M_TWI_TWI_CTRL_ENABLE, VTSS_TWI_TWI_CTRL);
 
     return 0;
 }
@@ -297,6 +414,9 @@ static int i2c_vcoreiii_probe(struct platform_device *pdev)
 #elif defined(CONFIG_VTSS_VCOREIII_LUTON26)
     vcoreiii_gpio_set_alternate(5, 1); /* TWI_SCL */
     vcoreiii_gpio_set_alternate(6, 1); /* TWI_SDA */
+#elif defined(CONFIG_VTSS_VCOREIII_JAGUAR2)
+    vcoreiii_gpio_set_alternate(14, 1); /* TWI_SCL */
+    vcoreiii_gpio_set_alternate(15, 1); /* TWI_SDA */
 #else
 #error Unsupported platform!
 #endif
