@@ -68,6 +68,8 @@
 /* Single-instance macros */
 #if !defined(CONFIG_VTSS_VCOREIII_JAGUAR2)
 /* Only one instance available */
+#define VTSS_WR(data, address) writel(data, address)
+#define VTSS_RD(data, address) readl(data, address)
 #else
 /* Use the default instance for now */
 #define VTSS_WR(data,address) writel(data, address(VTSS_TO_TWI))
@@ -126,6 +128,18 @@
 #endif
 #if !defined(VTSS_M_TWI_TWI_TX_ABRT_SOURCE_ARB_LOST)
 #define VTSS_M_TWI_TWI_TX_ABRT_SOURCE_ARB_LOST VTSS_F_TWI_TWI_TX_ABRT_SOURCE_ARB_LOST
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_STAT_RX_FULL)
+#define VTSS_M_TWI_TWI_INTR_STAT_RX_FULL VTSS_F_TWI_TWI_INTR_STAT_RX_FULL
+#endif
+#if !defined(VTSS_M_TWI_TWI_INTR_STAT_TX_EMPTY)
+#define VTSS_M_TWI_TWI_INTR_STAT_TX_EMPTY VTSS_F_TWI_TWI_INTR_STAT_TX_EMPTY
+#endif
+#if !defined(VTSS_M_TWI_TWI_CFG_MASTER_ENA)
+#define VTSS_M_TWI_TWI_CFG_MASTER_ENA VTSS_F_TWI_TWI_CFG_MASTER_ENA
+#endif
+#if !defined(VTSS_M_TWI_TWI_CFG_SLAVE_DIS)
+#define VTSS_M_TWI_TWI_CFG_SLAVE_DIS VTSS_F_TWI_TWI_CFG_SLAVE_DIS
 #endif
 
 
