@@ -61,15 +61,14 @@
 #define VCOREIII_XFER_TIMEOUT       (HZ/2) // 0.5sec
 #define VCOREIII_TX_FIFO_FULL_LEVEL 8
 #define VCOREIII_TX_FIFO_THRESHOLD  6
-#define VCOREIII_RX_FIFO_FULL_LEVEL 8
-#define VCOREIII_RX_FIFO_THRESHOLD  6
+
 
 // Macro for accessing registers - Used for being able to see when we do registers accesses
 /* Single-instance macros */
 #if !defined(CONFIG_VTSS_VCOREIII_JAGUAR2)
 /* Only one instance available */
 #define VTSS_WR(data, address) writel(data, address)
-#define VTSS_RD(data, address) readl(data, address)
+#define VTSS_RD(address) readl(address)
 #else
 /* Use the default instance for now */
 #define VTSS_WR(data,address) writel(data, address(VTSS_TO_TWI))
@@ -141,7 +140,9 @@
 #if !defined(VTSS_M_TWI_TWI_CFG_SLAVE_DIS)
 #define VTSS_M_TWI_TWI_CFG_SLAVE_DIS VTSS_F_TWI_TWI_CFG_SLAVE_DIS
 #endif
-
+#if !defined(VTSS_M_TWI_TWI_CFG_RESTART_ENA)
+#define VTSS_M_TWI_TWI_CFG_RESTART_ENA VTSS_F_TWI_TWI_CFG_RESTART_ENA
+#endif
 
 
 struct vcoreiii_twi_iface {
