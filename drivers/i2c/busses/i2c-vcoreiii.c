@@ -195,7 +195,7 @@ static void stuff_rx(struct vcoreiii_twi_iface *dev)
     spin_lock_irqsave(&dev->lock, flags);
 
     /* read from slave */
-    while((lev = VTSS_RD(VTSS_TWI_TWI_RXFLR)) < VCOREIII_RX_FIFO_THRESHOLD) {
+    while ((lev = VTSS_RD(VTSS_TWI_TWI_RXFLR)) < VCOREIII_RX_FIFO_THRESHOLD) {
         if (lev != pre_lev) {
             DEBUG_I2C("GET 1 byte, level %d\n", lev);
         }
@@ -247,10 +247,9 @@ static int do_xfer(struct i2c_adapter *adap, struct i2c_msg *msg)
     if (msg->flags & I2C_M_RD) {
         // read command - data = 0x00 (don't care)
         //VTSS_WR(VTSS_M_TWI_TWI_DATA_CMD_CMD, VTSS_TWI_TWI_DATA_CMD);
+        VTSS_WR(VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL, VTSS_TWI_TWI_INTR_MASK); // enable rx fifo interrupt
         while (dev->buf_len > 0) {
             stuff_rx(dev);
-            if (dev->buf_len > 0)
-                VTSS_WR(VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL, VTSS_TWI_TWI_INTR_MASK); // enable rx fifo interrupt
         }
     } else {
         // write command - stuff data into fifo
@@ -314,7 +313,7 @@ static irqreturn_t vcoreiii_twi_interrupt_entry(int irq, void *dev_id)
     while((status = VTSS_RD(VTSS_TWI_TWI_INTR_STAT))) { // figure out what interrupt we got
         DEBUG_I2C_L(2, "IRQ stat 0x%lx\n", status);
         if (count++ == 100) {
-            dev_err(dev->dev, "Too much work in one IRQ - stat 0x%lx\n", status);
+            dev_err(dev->dev, "Too much work in one IRQ - stat 0x%lx, buf_len %d, RFNE %d\n", status, dev->buf_len, (VTSS_RD(VTSS_TWI_TWI_STAT) & VTSS_M_TWI_TWI_STAT_RFNE));
             break;
         }
 	if(status & VTSS_M_TWI_TWI_INTR_STAT_TX_ABRT) {
@@ -333,13 +332,15 @@ static irqreturn_t vcoreiii_twi_interrupt_entry(int irq, void *dev_id)
                 (*dev->buf) = VTSS_RD(VTSS_TWI_TWI_DATA_CMD);
                 DEBUG_I2C("READ %x, %d bytes left\n", *(dev->buf), dev->buf_len);
                 dev->buf++;
-                if (--dev->buf_len == 0) {
-                    VTSS_WR(0, VTSS_TWI_TWI_INTR_MASK);
-                    DEBUG_I2C("Read complete\n");
-                    complete(&dev->cmd_complete);
-                    break;
-                }
-            }            
+                dev->buf_len--;
+                
+            }
+            if (dev->buf_len <= 0) {
+                VTSS_WR(0, VTSS_TWI_TWI_INTR_MASK);
+                DEBUG_I2C("Read complete\n");
+                complete(&dev->cmd_complete);
+                break;
+            }
         }
 
         if(status & VTSS_M_TWI_TWI_INTR_STAT_TX_EMPTY) {
@@ -400,7 +401,7 @@ static int i2c_vcoreiii_hwinit(const struct vcoreiii_i2c_platform_data *pdata)
     reg_val = (0.25 * clk_freq / 1000000);  // datasheet 6.17.1.30
     VTSS_WR(reg_val, VTSS_TWI_TWI_SDA_SETUP);
 
-    VTSS_WR(VCOREIII_RX_FIFO_THRESHOLD, VTSS_TWI_TWI_RX_TL); /* (n+1) => 7 byte of data */
+    VTSS_WR(0, VTSS_TWI_TWI_RX_TL); /* (n+1) => one byte of data */
     VTSS_WR(0x0, VTSS_TWI_TWI_INTR_MASK); // mask all until we're ready
     VTSS_WR(VTSS_M_TWI_TWI_CTRL_ENABLE, VTSS_TWI_TWI_CTRL);
 
