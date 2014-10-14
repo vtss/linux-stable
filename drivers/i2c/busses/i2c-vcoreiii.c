@@ -61,7 +61,8 @@
 #define VCOREIII_XFER_TIMEOUT       (HZ/2) // 0.5sec
 #define VCOREIII_TX_FIFO_FULL_LEVEL 8
 #define VCOREIII_TX_FIFO_THRESHOLD  6
-
+#define VCOREIII_RX_FIFO_FULL_LEVEL 8
+#define VCOREIII_RX_FIFO_THRESHOLD  6
 
 // Macro for accessing registers - Used for being able to see when we do registers accesses
 /* Single-instance macros */
@@ -189,20 +190,17 @@ static void stuff_tx(struct vcoreiii_twi_iface *dev)
 static void stuff_rx(struct vcoreiii_twi_iface *dev)
 {
     unsigned long flags;
-    int lev;
-    size_t cnt = dev->buf_len;
-    
+    int lev, pre_lev;
+        
     spin_lock_irqsave(&dev->lock, flags);
 
     /* read from slave */
-    while ((lev = VTSS_RD(VTSS_TWI_TWI_STAT) & VTSS_M_TWI_TWI_STAT_TFNF)) {
-        if (cnt > 0) {
-            DEBUG_I2C("GET 1 byte, %d bytes left, level %d\n", cnt, lev);
-            VTSS_WR(VTSS_M_TWI_TWI_DATA_CMD_CMD, VTSS_TWI_TWI_DATA_CMD);
-            cnt--;                
+    while((lev = VTSS_RD(VTSS_TWI_TWI_RXFLR)) < VCOREIII_RX_FIFO_THRESHOLD) {
+        if (lev != pre_lev) {
+            DEBUG_I2C("GET 1 byte, level %d\n", lev);
         }
-        if (cnt == 0)
-            break;
+        pre_lev = lev;
+        VTSS_WR(VTSS_M_TWI_TWI_DATA_CMD_CMD, VTSS_TWI_TWI_DATA_CMD);
     }
 
     spin_unlock_irqrestore(&dev->lock, flags);
@@ -251,7 +249,8 @@ static int do_xfer(struct i2c_adapter *adap, struct i2c_msg *msg)
         //VTSS_WR(VTSS_M_TWI_TWI_DATA_CMD_CMD, VTSS_TWI_TWI_DATA_CMD);
         while (dev->buf_len > 0) {
             stuff_rx(dev);
-            VTSS_WR(VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL, VTSS_TWI_TWI_INTR_MASK); // enable rx fifo interrupt
+            if (dev->buf_len > 0)
+                VTSS_WR(VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL, VTSS_TWI_TWI_INTR_MASK); // enable rx fifo interrupt
         }
     } else {
         // write command - stuff data into fifo
@@ -327,9 +326,9 @@ static irqreturn_t vcoreiii_twi_interrupt_entry(int irq, void *dev_id)
         }
 
         if(status & VTSS_M_TWI_TWI_INTR_STAT_RX_FULL) {
-            status &= ~VTSS_M_TWI_TWI_INTR_MASK_M_RX_FULL; /* Clear rx_full */
+            status &= ~VTSS_M_TWI_TWI_INTR_STAT_RX_FULL; /* Clear rx_full */
             /* Drain Rx FIFO */
-            while (VTSS_RD(VTSS_TWI_TWI_STAT) & VTSS_M_TWI_TWI_STAT_RFNE) {
+            while (dev->buf_len > 0 && (VTSS_RD(VTSS_TWI_TWI_STAT) & VTSS_M_TWI_TWI_STAT_RFNE)) {
                 /* while data in fifo */
                 (*dev->buf) = VTSS_RD(VTSS_TWI_TWI_DATA_CMD);
                 DEBUG_I2C("READ %x, %d bytes left\n", *(dev->buf), dev->buf_len);
@@ -401,7 +400,7 @@ static int i2c_vcoreiii_hwinit(const struct vcoreiii_i2c_platform_data *pdata)
     reg_val = (0.25 * clk_freq / 1000000);  // datasheet 6.17.1.30
     VTSS_WR(reg_val, VTSS_TWI_TWI_SDA_SETUP);
 
-    VTSS_WR(0, VTSS_TWI_TWI_RX_TL); /* (n+1) => one byte of data */
+    VTSS_WR(VCOREIII_RX_FIFO_THRESHOLD, VTSS_TWI_TWI_RX_TL); /* (n+1) => 7 byte of data */
     VTSS_WR(0x0, VTSS_TWI_TWI_INTR_MASK); // mask all until we're ready
     VTSS_WR(VTSS_M_TWI_TWI_CTRL_ENABLE, VTSS_TWI_TWI_CTRL);
 
