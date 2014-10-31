@@ -40,7 +40,7 @@
 #define VTSS_IOREG(t,o)	((void __iomem *)VTSS_IOADDR(t,o))
 
 #if defined(CONFIG_VTSS_VCOREIII_JAGUAR2)
-#include <vtss_jaguar2_regs.h>
+#include <vtss_jaguar2_core_regs.h>
 #else
 #error Invalid sub-architecture type
 #endif

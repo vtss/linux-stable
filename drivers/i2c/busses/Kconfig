@@ -86,6 +86,15 @@ config I2C_VCOREIII_MK1
 	  This driver can also be built as a module.  If so, the module
 	  will be called i2c-vcoreiii.
 
+config I2C_VCOREIII_JAGUAR2
+        tristate "Vitesse VCore-III I2C driver for Jaguar2"
+	depends on VTSS_VCOREIII_JAGUAR2
+	help
+	  Support for Vitesse Vcore-III I2C controller driver.
+
+	  This driver can also be built as a module. If so, the module
+	  will be called i2c-vcoreiii.
+
 config I2C_I801
 	tristate "Intel 82801 (ICH/PCH)"
 	depends on PCI
