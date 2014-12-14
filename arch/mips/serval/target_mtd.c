@@ -73,7 +73,7 @@ static struct mtd_partition serval_spi_flash_partitions[] = {
 };
 
 static struct flash_platform_data serval_spi_flash_data = {
-	.type = "m25p128",
+	.type = "mx25l12805d",
 	.name = "spi_flash",
 	.parts = serval_spi_flash_partitions,
 	.nr_parts = ARRAY_SIZE(serval_spi_flash_partitions),
